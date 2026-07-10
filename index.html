@@ -95,9 +95,8 @@
 
         <h3>📝 キャラ設定 (JSON)</h3>
         <div class="control-group">
-            <label>ファイルから読み込む:</label>
+            <label>ファイルから読込:</label>
             <input type="file" id="json-file" accept=".json" />
-            
             <label style="margin-top: 10px;">直接編集 (テキストボックス):</label>
             <textarea id="json-text" rows="8" placeholder="ここにJSONをペーストして編集できます"></textarea>
             <button class="action-btn" style="background:#4CAF50;" onclick="applyJsonText()">テキストから適用</button>
@@ -187,13 +186,11 @@
         apiKeyInput.value = localStorage.getItem('vrm_apiKey') || '';
         apiKeyInput.addEventListener('change', (e) => localStorage.setItem('vrm_apiKey', e.target.value));
 
-        // テキストボックスに既存の設定を反映
         const jsonTextArea = document.getElementById('json-text');
         if (characterSettings) {
             jsonTextArea.value = JSON.stringify(characterSettings, null, 2);
         }
 
-        // ファイルからJSON読み込み
         document.getElementById('json-file').addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -204,31 +201,27 @@
                     localStorage.setItem('vrm_characterSettings', JSON.stringify(characterSettings));
                     jsonTextArea.value = JSON.stringify(characterSettings, null, 2);
                     alert('キャラクター設定ファイルを読み込みました！');
-                } catch (err) {
-                    alert('JSONファイルの解析に失敗しました。');
-                }
+                } catch (err) { alert('JSONファイルの解析に失敗しました。'); }
             };
             reader.readAsText(file);
         });
 
-        // テキストボックスからJSON適用
         window.applyJsonText = () => {
             try {
                 const text = jsonTextArea.value;
                 characterSettings = JSON.parse(text);
                 localStorage.setItem('vrm_characterSettings', JSON.stringify(characterSettings));
                 alert('テキストボックスのキャラ設定を適用しました！');
-            } catch (err) {
-                alert('JSONの形式が正しくありません。エラーを確認してください。');
-            }
+            } catch (err) { alert('JSONの形式が正しくありません。エラーを確認してください。'); }
         };
 
         // ==========================================
         // 3. Three.js & VRM セットアップ
         // ==========================================
         const scene = new THREE.Scene();
+        // 全身や足元の動きが見えるようにカメラを少し引き気味に
         const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 20);
-        camera.position.set(0, 1.3, 3.5); 
+        camera.position.set(0, 1.1, 4.0); 
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -236,7 +229,7 @@
         document.body.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
-        controls.target.set(0, 1.0, 0);
+        controls.target.set(0, 0.9, 0);
         controls.update();
 
         const light = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -251,7 +244,6 @@
         const loader = new GLTFLoader();
         loader.register((parser) => new VRMLoaderPlugin(parser));
 
-        // VRMロード処理本体
         function loadVRMData(file) {
             document.getElementById('loading-overlay').style.display = 'flex';
             const blobUrl = URL.createObjectURL(file);
@@ -260,14 +252,10 @@
                 const vrm = gltf.userData.vrm;
                 scene.add(vrm.scene);
                 currentVrm = vrm;
-                vrm.scene.rotation.y = Math.PI;
-
-                // ★ 強風・落下（スカートめくれ）対策：ロード直後に姿勢を更新してSpringBoneを鎮静化
+                
                 vrm.humanoid.resetPose();
                 vrm.update(0); 
-                if (vrm.springBoneManager) {
-                    vrm.springBoneManager.reset();
-                }
+                if (vrm.springBoneManager) vrm.springBoneManager.reset();
 
                 document.getElementById('loading-overlay').style.display = 'none';
                 document.getElementById('settings-panel').style.display = 'none';
@@ -275,15 +263,13 @@
             });
         }
 
-        // 新規ファイル選択時
         document.getElementById('vrm-file').addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (!file) return;
             loadVRMData(file);
-            saveVRMToIDB(file); // ショートカット用に保存
+            saveVRMToIDB(file);
         });
 
-        // ショートカットUIの更新と操作
         function updateVRMShortcutUI() {
             loadVRMFromIDB().then(data => {
                 const container = document.getElementById('vrm-shortcut-container');
@@ -297,27 +283,16 @@
                             </div>
                         </div>
                     `;
-                } else {
-                    container.innerHTML = '';
-                }
+                } else { container.innerHTML = ''; }
             });
         }
 
-        window.loadSavedVRM = () => {
-            loadVRMFromIDB().then(data => {
-                if (data && data.file) loadVRMData(data.file);
-            });
-        };
-
-        window.removeSavedVRM = () => {
-            deleteVRMFromIDB();
-        };
-
-        // 初期ロード時にショートカットUIを描画
+        window.loadSavedVRM = () => { loadVRMFromIDB().then(data => { if (data && data.file) loadVRMData(data.file); }); };
+        window.removeSavedVRM = () => { deleteVRMFromIDB(); };
         updateVRMShortcutUI();
 
         // ==========================================
-        // 4. アニメーション・アルゴリズム
+        // 4. アニメーション・アルゴリズム (超強化版)
         // ==========================================
         function setBasePose(humanoid) {
             humanoid.getNormalizedBoneNode('leftShoulder').rotation.z = 0.1;
@@ -333,11 +308,15 @@
             const humanoid = currentVrm.humanoid;
             const expressions = currentVrm.expressionManager;
 
+            // 毎フレーム姿勢と座標をリセットして再計算
             humanoid.resetPose();
             setBasePose(humanoid);
+            currentVrm.scene.position.set(0, 0, 0);
+            currentVrm.scene.rotation.y = Math.PI;
 
-            humanoid.getNormalizedBoneNode('spine').rotation.x = Math.sin(elapsedTime * 1.5) * 0.01;
-            humanoid.getNormalizedBoneNode('neck').rotation.y = Math.sin(elapsedTime * 0.3) * 0.03;
+            // ベースの揺れ（呼吸）
+            let spineX = Math.sin(elapsedTime * 1.5) * 0.02;
+            let neckY = 0;
 
             if (gestureTimer > 0) {
                 gestureTimer -= deltaTime;
@@ -351,37 +330,119 @@
             }
 
             switch (currentGesture) {
+                case 'listening': 
+                    // 待機中：重心を左右に揺らし、時々振り返るように首を動かす
+                    currentVrm.scene.position.x = Math.sin(elapsedTime * 0.5) * 0.05;
+                    humanoid.getNormalizedBoneNode('spine').rotation.z = Math.sin(elapsedTime * 0.5) * 0.03;
+                    neckY = Math.sin(elapsedTime * 0.3) * 0.1; 
+                    break;
+
                 case 'nod': 
-                    humanoid.getNormalizedBoneNode('neck').rotation.x = Math.sin(elapsedTime * 8) * 0.15;
+                    // 前傾姿勢で大きく頷く
+                    spineX += 0.2;
+                    humanoid.getNormalizedBoneNode('neck').rotation.x = Math.sin(elapsedTime * 8) * 0.2;
+                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.x = -0.2;
+                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.x = -0.2;
                     break;
+
                 case 'shake_head': 
-                    humanoid.getNormalizedBoneNode('neck').rotation.y = Math.sin(elapsedTime * 10) * 0.2;
+                    // 手を振りながら首を振る
+                    neckY = Math.sin(elapsedTime * 12) * 0.3;
+                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.z = -1.2;
+                    humanoid.getNormalizedBoneNode('rightLowerArm').rotation.y = Math.sin(elapsedTime * 12) * 0.5;
+                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.z = 1.2;
+                    humanoid.getNormalizedBoneNode('leftLowerArm').rotation.y = -Math.sin(elapsedTime * 12) * 0.5;
                     break;
+
                 case 'joy': 
-                    humanoid.getNormalizedBoneNode('spine').rotation.x -= 0.05;
-                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.z = 1.8;
-                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.x = -0.3;
+                    // 飛び跳ねながら足をバタつかせ、バンザイ
+                    currentVrm.scene.position.y = Math.abs(Math.sin(elapsedTime * 6)) * 0.15; 
+                    spineX -= 0.1;
+                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.z = 2.2;
+                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.z = -2.2;
+                    humanoid.getNormalizedBoneNode('leftUpperLeg').rotation.x = -Math.abs(Math.sin(elapsedTime * 6)) * 0.5;
+                    humanoid.getNormalizedBoneNode('rightUpperLeg').rotation.x = -Math.abs(Math.cos(elapsedTime * 6)) * 0.5;
+                    humanoid.getNormalizedBoneNode('leftLowerLeg').rotation.x = Math.abs(Math.sin(elapsedTime * 6)) * 0.5;
+                    humanoid.getNormalizedBoneNode('rightLowerLeg').rotation.x = Math.abs(Math.cos(elapsedTime * 6)) * 0.5;
                     break;
+
                 case 'angry': 
-                    humanoid.getNormalizedBoneNode('spine').rotation.x = 0.1;
-                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.x = -0.3;
-                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.x = -0.3;
-                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.z = 1.0;
-                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.z = -1.0;
+                    // 前傾姿勢で怒り、地団駄を踏む
+                    spineX += 0.2;
+                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.x = -0.5;
+                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.x = -0.5;
+                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.z = 0.5;
+                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.z = -0.5;
+                    humanoid.getNormalizedBoneNode('leftLowerArm').rotation.x = -1.0;
+                    humanoid.getNormalizedBoneNode('rightLowerArm').rotation.x = -1.0;
+                    humanoid.getNormalizedBoneNode('leftUpperLeg').rotation.x = -Math.max(0, Math.sin(elapsedTime * 15)) * 0.4;
+                    humanoid.getNormalizedBoneNode('rightUpperLeg').rotation.x = -Math.max(0, -Math.sin(elapsedTime * 15)) * 0.4;
                     break;
+
                 case 'sorrow': 
-                    humanoid.getNormalizedBoneNode('spine').rotation.x = 0.15;
-                    humanoid.getNormalizedBoneNode('neck').rotation.x = 0.3;
+                    // 膝を曲げて深く座り込む（しゃがむ）
+                    currentVrm.scene.position.y = -0.4; 
+                    spineX += 0.4; 
+                    humanoid.getNormalizedBoneNode('neck').rotation.x = 0.5; 
+                    humanoid.getNormalizedBoneNode('leftUpperLeg').rotation.x = -1.0;
+                    humanoid.getNormalizedBoneNode('rightUpperLeg').rotation.x = -1.0;
+                    humanoid.getNormalizedBoneNode('leftLowerLeg').rotation.x = 1.0;
+                    humanoid.getNormalizedBoneNode('rightLowerLeg').rotation.x = 1.0;
+                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.z = 0.2;
+                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.z = -0.2;
                     break;
+
                 case 'present': 
+                    // 歩き回りながら案内（左右にステップ）
+                    currentVrm.scene.position.x = Math.sin(elapsedTime * 2) * 0.3;
+                    currentVrm.scene.rotation.y = Math.PI + Math.sin(elapsedTime * 2) * 0.2;
                     humanoid.getNormalizedBoneNode('rightUpperArm').rotation.z = -1.2;
                     humanoid.getNormalizedBoneNode('rightUpperArm').rotation.x = -0.4;
                     humanoid.getNormalizedBoneNode('rightLowerArm').rotation.x = -0.2;
                     break;
-                case 'listening': 
-                    humanoid.getNormalizedBoneNode('neck').rotation.z = Math.sin(elapsedTime * 0.8) * 0.05;
+
+                case 'surprised': 
+                    // 大きく仰け反る
+                    currentVrm.scene.position.y = Math.sin(elapsedTime * 10) * 0.05; 
+                    spineX -= 0.4; 
+                    humanoid.getNormalizedBoneNode('neck').rotation.x = -0.2;
+                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.z = 1.5;
+                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.z = -1.5;
+                    humanoid.getNormalizedBoneNode('leftLowerArm').rotation.x = -1.0;
+                    humanoid.getNormalizedBoneNode('rightLowerArm').rotation.x = -1.0;
+                    break;
+
+                case 'thinking': 
+                    // 前傾して顔・顎に手を当てる
+                    spineX += 0.1;
+                    currentVrm.scene.position.y = -0.05;
+                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.z = -0.2;
+                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.x = -1.2;
+                    humanoid.getNormalizedBoneNode('rightLowerArm').rotation.x = -1.8;
+                    humanoid.getNormalizedBoneNode('rightLowerArm').rotation.y = 0.5;
+                    humanoid.getNormalizedBoneNode('neck').rotation.x = 0.1;
+                    humanoid.getNormalizedBoneNode('neck').rotation.y = 0.2;
+                    break;
+
+                case 'shy': 
+                    // 内股になり、体をよじってモジモジする
+                    spineX += 0.1;
+                    currentVrm.scene.rotation.y = Math.PI + Math.sin(elapsedTime * 3) * 0.1; 
+                    humanoid.getNormalizedBoneNode('leftUpperLeg').rotation.z = 0.1;
+                    humanoid.getNormalizedBoneNode('rightUpperLeg').rotation.z = -0.1;
+                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.z = 0.5;
+                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.z = -0.5;
+                    humanoid.getNormalizedBoneNode('leftUpperArm').rotation.x = -1.0;
+                    humanoid.getNormalizedBoneNode('rightUpperArm').rotation.x = -1.0;
+                    humanoid.getNormalizedBoneNode('leftLowerArm').rotation.x = -1.5;
+                    humanoid.getNormalizedBoneNode('rightLowerArm').rotation.x = -1.5;
                     break;
             }
+
+            // 最終的なベース揺れの加算
+            humanoid.getNormalizedBoneNode('spine').rotation.x += spineX;
+            humanoid.getNormalizedBoneNode('neck').rotation.y += neckY;
+
             currentVrm.update(deltaTime);
         }
 
@@ -427,6 +488,7 @@
             chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
         }
 
+        // 🌟 タイミング調整：返答テキストの文字数に応じた遅延発動
         function triggerAvatarAction(emotionLabel, gestureLabel, textLength) {
             if (!currentVrm) return;
             const expressions = currentVrm.expressionManager;
@@ -436,14 +498,17 @@
             expressions.setValue('sad', 0);
             expressions.setValue('neutral', 0);
             
+            // 追加した感情（shyなど）のブレンド
             if (emotionLabel === 'joy') expressions.setValue('happy', 1.0);
             else if (emotionLabel === 'angry') expressions.setValue('angry', 1.0);
             else if (emotionLabel === 'sorrow') expressions.setValue('sad', 1.0);
+            else if (emotionLabel === 'shy') { expressions.setValue('happy', 0.5); expressions.setValue('sad', 0.5); }
             else expressions.setValue('neutral', 1.0);
 
+            // ユーザーが文字を読み進めているタイミング（約1.5秒後）でジェスチャー発動
             setTimeout(() => {
                 currentGesture = gestureLabel || 'listening';
-                gestureTimer = 3.5; 
+                gestureTimer = 4.0; // ジェスチャー維持時間を少し長めに(4秒)
             }, 1500);
         }
 
@@ -463,6 +528,7 @@
                 parts: [{ text: msg.content }]
             }));
 
+            // 🌟 システムプロンプト拡張（選択肢を10種類に）
             const systemPrompt = `
 あなたは以下の設定を持つ3DヒューマノイドAIです。必ず指定されたJSONフォーマットのみで返答してください。
 【キャラ設定】
@@ -472,12 +538,11 @@ ${JSON.stringify(characterSettings)}
 {
   "speech_text": "実際に発話するテキスト",
   "quick_replies": ["返答候補1", "返答候補2", "返答候補3"],
-  "emotion": "joy, angry, sorrow, neutralのいずれか",
-  "gesture": "nod, shake_head, joy, angry, sorrow, present, listeningのいずれか"
+  "emotion": "joy, angry, sorrow, shy, neutralのいずれか",
+  "gesture": "nod, shake_head, joy, angry, sorrow, present, listening, surprised, thinking, shy のいずれか"
 }
 `;
             try {
-                // モデル指定を最新の Gemini-3.1-flash-lite に設定
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
