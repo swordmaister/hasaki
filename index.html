@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>3D Partner AI - Iris</title>
+    <title>3D Partner AI - Iris (TTS Integrated Edition)</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; position: fixed; background-color: #e0f7fa; font-family: sans-serif; user-select: none; -webkit-user-select: none; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
@@ -11,18 +11,23 @@
         #api-status-overlay { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.6); color: #00ff00; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 11px; z-index: 15; pointer-events: none; backdrop-filter: blur(2px); display: none; border: 1px solid #00ff00; }
         
         #settings-toggle { position: absolute; top: 15px; right: 15px; z-index: 20; background: #333; color: white; border: none; border-radius: 50%; width: 45px; height: 45px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
-        #settings-panel { position: absolute; top: 70px; right: 15px; width: 300px; max-width: 90vw; background: rgba(0, 0, 0, 0.85); color: white; padding: 15px; border-radius: 10px; box-sizing: border-box; z-index: 20; display: none; backdrop-filter: blur(5px); max-height: 85vh; overflow-y: auto; }
+        #settings-panel { position: absolute; top: 70px; right: 15px; width: 320px; max-width: 90vw; background: rgba(0, 0, 0, 0.85); color: white; padding: 15px; border-radius: 10px; box-sizing: border-box; z-index: 20; display: none; backdrop-filter: blur(5px); max-height: 85vh; overflow-y: auto; }
         h3 { margin-top: 0; font-size: 14px; border-bottom: 1px solid #555; padding-bottom: 5px; color: #4CAF50; }
         .control-group { margin-bottom: 15px; } .control-group label { display: block; font-size: 12px; margin-bottom: 5px; }
-        input[type="password"], input[type="text"] { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 5px; border: none; }
+        input[type="password"], input[type="text"] { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 5px; border: none; font-size: 12px; margin-bottom: 5px; }
         input[type="file"] { width: 100%; font-size: 12px; background: #fff; color: #000; padding: 5px; border-radius: 5px; box-sizing: border-box; }
-        input[type="range"] { width: 100%; } select { width: 100%; box-sizing: border-box; padding: 6px; border-radius: 5px; font-size: 12px; }
+        input[type="range"] { width: 100%; } select { width: 100%; box-sizing: border-box; padding: 6px; border-radius: 5px; font-size: 12px; margin-bottom: 5px; }
         textarea { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 5px; border: none; font-size: 12px; resize: vertical; }
         button.action-btn { width: 100%; padding: 10px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 5px; }
         button.action-btn:active { background: #1976D2; }
 
         #debug-toggle { position: absolute; top: 70px; right: 15px; z-index: 20; background: #9C27B0; color: white; border: none; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
         #debug-panel { position: absolute; top: 125px; right: 15px; width: 300px; max-width: 90vw; background: rgba(0,0,0,0.85); color: white; padding: 15px; border-radius: 10px; box-sizing: border-box; z-index: 20; display: none; backdrop-filter: blur(5px); }
+
+        #jojo-toggle { position: absolute; top: 125px; right: 15px; z-index: 20; background: #FFC107; color: black; border: none; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-weight: bold;}
+        #jojo-panel { position: absolute; top: 180px; right: 15px; width: 280px; max-width: 90vw; background: rgba(20, 0, 40, 0.9); color: #fff; padding: 15px; border-radius: 10px; border: 2px solid #FFC107; box-sizing: border-box; z-index: 20; display: none; backdrop-filter: blur(5px); max-height: 50vh; overflow-y: auto; }
+        .jojo-btn { display: block; width: 100%; margin: 4px 0; padding: 8px; background: rgba(255, 193, 7, 0.2); color: #FFD54F; border: 1px solid #FFC107; border-radius: 4px; cursor: pointer; font-weight:bold; font-size: 12px; text-align: left; }
+        .jojo-btn:active { background: #FFC107; color: black; }
 
         #chat-container { position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(to top, rgba(255,255,255,0.95) 40%, rgba(255,255,255,0)); padding: 10px 10px 15px 10px; box-sizing: border-box; z-index: 10; display: flex; flex-direction: column; gap: 8px; pointer-events: none; transition: background 0.3s ease; }
         #chat-container.transparent-mode { background: transparent; }
@@ -37,6 +42,10 @@
         .msg { max-width: 85%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: all 0.3s ease; }
         .msg.user { align-self: flex-end; background: #E3F2FD; border-bottom-right-radius: 2px; }
         .msg.bot { align-self: flex-start; background: #ffffff; border: 1px solid #eee; border-bottom-left-radius: 2px; }
+        
+        .blinking-dots { animation: blink 1.4s infinite both; }
+        @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
+
         #quick-replies { display: flex; gap: 8px; overflow-x: auto; pointer-events: auto; padding-bottom: 5px; scrollbar-width: none; }
         #quick-replies::-webkit-scrollbar { display: none; }
         .qr-btn { padding: 8px 14px; background: #F48FB1; color: white; border: none; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; white-space: nowrap; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
@@ -61,55 +70,96 @@
         <div style="font-size: 24px; margin-bottom: 10px;">⏳ 処理中...</div>
         <div id="loading-error-text" style="color: #ff5252; font-size: 12px; max-width: 80%; text-align: center;"></div>
     </div>
-    <div id="api-status-overlay">
-        <div style="color:#fff; margin-bottom:5px; border-bottom:1px solid #444; padding-bottom:3px;">API Quota</div>
-        <div>Req/Min : <span id="stat-rpm">0</span></div>
-        <div>Tok/Min : <span id="stat-tpm">0</span></div>
-    </div>
-    <div id="action-pad">
-        <div class="pad-btn" id="btn-up">⬆️</div><div class="pad-btn" id="btn-left">⬅️</div>
-        <div class="pad-btn" id="btn-fly">✈️</div><div class="pad-btn" id="btn-right">➡️</div>
-        <div class="pad-btn" id="btn-down">⬇️</div>
-    </div>
+    <div id="api-status-overlay"><div>Req/Min : <span id="stat-rpm">0</span></div><div>Tok/Min : <span id="stat-tpm">0</span></div></div>
+    <div id="action-pad"><div class="pad-btn" id="btn-up">⬆️</div><div class="pad-btn" id="btn-left">⬅️</div><div class="pad-btn" id="btn-fly">✈️</div><div class="pad-btn" id="btn-right">➡️</div><div class="pad-btn" id="btn-down">⬇️</div></div>
     
     <button id="settings-toggle" onclick="toggleSettings()">⚙️</button>
     <button id="debug-toggle" onclick="toggleDebugPanel()">🛠️</button>
+    <button id="jojo-toggle" onclick="toggleJojoPanel()">🌟</button>
 
     <div id="settings-panel">
-        <div style="text-align: center; color: #4CAF50; font-family: monospace; font-size: 12px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #555;">
-            Ver 6.1.0 - Sit-Only Sleep Mode
+        <div style="text-align: center; color: #4CAF50; font-family: monospace; font-size: 12px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #555;">Ver 20.0 - TTS Integrated Engine</div>
+        
+        <h3>🔑 API キー</h3>
+        <div class="control-group"><input type="password" id="api-key" placeholder="AI Studioで取得したキー"></div>
+        
+        <h3>📂 アバター (VRM)</h3>
+        <div class="control-group"><input type="file" id="vrm-file" accept=".vrm" /><div id="vrm-shortcut-container"></div></div>
+        
+        <h3>🎬 モーション管理 (.vrma)</h3>
+        <div class="control-group">
+            <input type="file" id="vrma-file" accept=".vrma" />
+            <div style="display:flex; gap:5px; margin-top:5px;">
+                <input type="text" id="vrma-name" placeholder="呼出名 (例: joy, nod)" style="flex:1;">
+                <button class="action-btn" style="background:#8BC34A; margin-top:0; width:auto; padding:8px;" onclick="saveVrmaMotion()">保存</button>
+            </div>
+            <div id="vrma-shortcut-container" style="margin-top: 10px;"></div>
+        </div>
+
+        <h3>🗣️ 発声・動作設定</h3>
+        <div class="control-group" style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
+            <label style="display:flex; align-items:center; gap:5px; font-weight:bold; color:#4fc3f7; margin-bottom: 10px;">
+                <input type="checkbox" id="use-gemini-tts" checked style="width:auto;">🤖 Gemini TTSを使用する
+            </label>
+            <label>Gemini話者声質:</label>
+            <select id="tts-voice-select">
+                <option value="Aoede">Aoede (女性的 / 落ち着いた声)</option>
+                <option value="Kore">Kore (女性的 / 少し高め・明るい声)</option>
+                <option value="Puck">Puck (中性的 / 柔らかい声)</option>
+                <option value="Charon">Charon (男性的 / 低く重厚感のある声)</option>
+                <option value="Fenrir">Fenrir (男性的 / ハキハキした声)</option>
+            </select>
+            <label>TTS追加指示 (例: 少し照れくさそうに):</label>
+            <input type="text" id="tts-custom-prompt" placeholder="(任意) 空欄でOK">
+            
+            <div style="border-top: 1px solid #555; margin-top: 10px; padding-top: 10px;">
+                <label>フォールバック時ブラウザ音声:</label>
+                <select id="voice-select"></select>
+            </div>
         </div>
         
-        <h3>🔑 API キー</h3><div class="control-group"><input type="password" id="api-key" placeholder="AI Studioで取得したキー"></div>
-        <h3>📂 アバター (VRM)</h3><div class="control-group"><input type="file" id="vrm-file" accept=".vrm" /><div id="vrm-shortcut-container"></div></div>
-        <h3>🗣️ 音声・動作設定</h3>
-        <div class="control-group"><label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="tts-toggle" checked style="width:auto;"> 音声読上げ (連動口パク)</label><select id="voice-select" style="margin-top:5px;"></select></div>
         <div class="control-group"><label>歩行速度: <span id="speed-val">1.8</span></label><input type="range" id="speed-slider" min="0.5" max="4.0" step="0.1" value="1.8"></div>
-        <h3>🦴 姿勢補正</h3><div class="control-group"><label>前傾(猫背) ↔ 後傾(反り腰): <span id="posture-val">0.000</span></label><input type="range" id="posture-slider" min="-0.4" max="0.4" step="0.001" value="0.0"></div>
+        
+        <h3>🦴 姿勢補正 (手動プロシージャル用)</h3>
+        <div class="control-group"><label>前傾(猫背) ↔ 後傾(反り腰): <span id="posture-val">0.000</span></label><input type="range" id="posture-slider" min="-0.4" max="0.4" step="0.001" value="0.0"></div>
+        <div class="control-group" style="background: rgba(255,152,0,0.2); padding: 8px; border-radius: 5px; border: 1px solid #FF9800;">
+            <label style="display:flex; align-items:center; gap:5px; font-weight:bold; color:#FFD54F;"><input type="checkbox" id="axis-fix" style="width:auto;"> 肘・膝の反転補正 (X/Z軸入替)</label>
+        </div>
+
         <h3>📝 キャラ設定</h3><div class="control-group"><textarea id="json-text" rows="3" placeholder="ここにJSONをペーストして編集できます"></textarea><button class="action-btn" style="background:#4CAF50;" onclick="applyJsonText()">テキストから適用</button></div>
+        
         <h3>🧠 機能・データ管理</h3>
-        <div class="control-group"><button class="action-btn" style="background:#FF9800; margin-bottom: 15px;" onclick="toggleActionPad()">🎮 コントローラー表示切替</button><button class="action-btn" style="background:#009688;" onclick="exportMemory()">🧠 長期記憶をダウンロード</button><div style="margin-top: 5px; font-size: 11px;"><label>長期記憶を復元:</label><input type="file" id="memory-file" accept=".json" /></div><button class="action-btn" style="margin-top:15px;" onclick="exportChatLog()">💬 会話ログをダウンロード</button><button class="action-btn" onclick="clearMemory()" style="background:#f44336; margin-top:10px;">すべてリセット</button></div>
+        <div class="control-group">
+            <button class="action-btn" style="background:#FF9800; margin-bottom: 15px;" onclick="toggleActionPad()">🎮 コントローラー表示切替</button>
+            <button class="action-btn" style="background:#009688;" onclick="exportMemory()">🧠 長期記憶をダウンロード</button>
+            <div style="margin-top: 5px; font-size: 11px;"><label>長期記憶を復元:</label><input type="file" id="memory-file" accept=".json" /></div>
+            <button class="action-btn" style="margin-top:15px;" onclick="exportChatLog()">💬 会話ログをダウンロード</button>
+            <button class="action-btn" onclick="clearMemory()" style="background:#f44336; margin-top:10px;">すべてリセット</button>
+        </div>
     </div>
 
-    <!-- 🌟 デバッグ用パネル -->
     <div id="debug-panel">
-        <h3 style="color: #9C27B0; font-size: 15px; margin-top: 0; display:flex; justify-content: space-between;">
-            <span>🛠️ ポーズ調整テスト</span>
-            <span style="font-size: 12px; cursor:pointer;" onclick="toggleDebugPanel()">❌</span>
-        </h3>
-        <button onclick="testSitPose()" style="display: block; width: 100%; margin: 5px 0; padding: 8px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">🪑 座り姿勢テスト</button>
-        <button onclick="testRaiseArm()" style="display: block; width: 100%; margin: 5px 0; padding: 8px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">🙌 腕上げテスト</button>
-        <button onclick="testSpeakPose()" style="display: block; width: 100%; margin: 5px 0; padding: 8px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">🗣️ 話す姿勢テスト</button>
-        <button onclick="cancelTest()" style="display: block; width: 100%; margin: 5px 0; padding: 8px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">⏹️ テスト終了（通常に戻す）</button>
-        
-        <div style="margin-top: 15px; font-size: 12px; padding-top: 10px; border-top: 1px solid #555;">
-            <label style="display: flex; justify-content: space-between;"><span>上腕Z軸 (脇の開き):</span> <span id="upperArmZValue" style="color:#00e5ff; font-weight:bold;">1.00</span></label>
-            <input type="range" id="upperArmZSlider" min="-1.5" max="1.5" step="0.05" value="1.0" style="width: 100%; margin-bottom:10px;" oninput="updateTestValues()">
-            <label style="display: flex; justify-content: space-between;"><span>上腕Y軸 (腕の前後):</span> <span id="upperArmYValue" style="color:#00e5ff; font-weight:bold;">0.40</span></label>
-            <input type="range" id="upperArmYSlider" min="-1.5" max="1.5" step="0.05" value="0.4" style="width: 100%; margin-bottom:10px;" oninput="updateTestValues()">
-            <label style="display: flex; justify-content: space-between;"><span>肘X軸 (曲げ角度):</span> <span id="lowerArmXValue" style="color:#00e5ff; font-weight:bold;">1.20</span></label>
-            <input type="range" id="lowerArmXSlider" min="-0.5" max="3.0" step="0.05" value="1.2" style="width: 100%; margin-bottom:5px;" oninput="updateTestValues()">
-        </div>
+        <h3 style="color: #9C27B0; font-size: 15px; margin-top: 0; display:flex; justify-content: space-between;"><span>🛠️ デバッグ・テスト</span><span style="font-size: 12px; cursor:pointer;" onclick="toggleDebugPanel()">❌</span></h3>
+        <button onclick="triggerSitAction()" style="display: block; width: 100%; margin: 5px 0; padding: 6px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">🪑 椅子に座るテスト</button>
+        <button onclick="playTalkGesture('talk_explain')" style="display:block; width:100%; margin:4px 0; padding:6px; background:#1976D2; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">説明 (両手広げ)</button>
+        <button onclick="playTalkGesture('talk_passion')" style="display:block; width:100%; margin:4px 0; padding:6px; background:#1976D2; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">情熱的 (前傾演説)</button>
+        <button onclick="playTalkGesture('talk_think')" style="display:block; width:100%; margin:4px 0; padding:6px; background:#1976D2; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">思案 (顎に手)</button>
+        <button onclick="cancelTest()" style="display: block; width: 100%; margin: 10px 0 0; padding: 8px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">⏹️ リセット</button>
+    </div>
+
+    <div id="jojo-panel">
+        <h3 style="color: #FFC107; font-size: 15px; margin-top: 0; display:flex; justify-content: space-between; border-bottom-color:#FFC107;"><span>🌟 JOJO STANCE</span><span style="font-size: 12px; cursor:pointer;" onclick="toggleJojoPanel()">❌</span></h3>
+        <button class="jojo-btn" onclick="playJojo('jojo_jotaro')">1. 空条承太郎 (やれやれだぜ)</button>
+        <button class="jojo-btn" onclick="playJojo('jojo_dio')">2. DIO (WRYYYYY!)</button>
+        <button class="jojo-btn" onclick="playJojo('jojo_giorno')">3. ジョルノ (黄金の精神)</button>
+        <button class="jojo-btn" onclick="playJojo('jojo_joseph')">4. ジョセフ (次はテメーだ)</button>
+        <button class="jojo-btn" onclick="playJojo('jojo_josuke')">5. 東方仗助 (グレートだぜ)</button>
+        <button class="jojo-btn" onclick="playJojo('jojo_jonathan')">6. ジョナサン (正統派)</button>
+        <button class="jojo-btn" onclick="playJojo('jojo_caesar')">7. シーザー (腕組み)</button>
+        <button class="jojo-btn" onclick="playJojo('jojo_kira')">8. 吉良吉影 (平穏な思考)</button>
+        <button class="jojo-btn" onclick="playJojo('jojo_jolyne')">9. 空条徐倫 (ダイナミックS字)</button>
+        <button class="jojo-btn" onclick="playJojo('jojo_bucciarati')">10. ブチャラティ (覚悟の姿)</button>
+        <button class="jojo-btn" onclick="playJojo(null)" style="background:#f44336; color:white; border:none; text-align:center; margin-top:10px;">⏹️ ポーズ解除</button>
     </div>
 
     <div id="chat-container">
@@ -123,12 +173,16 @@
         <div id="input-area"><input type="text" id="chat-input" placeholder="メッセージを入力..." autocomplete="off"><button id="send-btn">➤</button></div>
     </div>
 
+    <!-- 音声再生用の隠しタグ -->
+    <audio id="audioPlayer"></audio>
+
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.167.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.167.0/examples/jsm/",
-                "@pixiv/three-vrm": "https://unpkg.com/@pixiv/three-vrm@3.2.0/lib/three-vrm.module.js"
+                "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/",
+                "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.2.0/lib/three-vrm.module.js",
+                "@pixiv/three-vrm-animation": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm-animation@3.2.0/lib/three-vrm-animation.module.js"
             }
         }
     </script>
@@ -137,328 +191,404 @@
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+        import { VRMLoaderPlugin, VRMHumanBoneName } from '@pixiv/three-vrm';
+        import { VRMAnimationLoaderPlugin } from '@pixiv/three-vrm-animation';
 
+        // --------------------------------------------------------
+        // エラーハンドラ & グローバル変数
+        // --------------------------------------------------------
+        window.hasApologizedForFallback = false; // TTS完全失敗時のギャグ演出用フラグ
+
+        window.addEventListener('error', (e) => {
+            const errorText = document.getElementById('loading-error-text');
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay.style.display === 'flex') {
+                errorText.innerHTML = `内部エラー<br><span style="font-size:10px; word-break:break-all;">${e.message}</span>`;
+                errorText.innerHTML += `<br><button style="margin-top:10px; padding:6px 12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('loading-overlay').style.display='none';">閉じる</button>`;
+            }
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+            const errorText = document.getElementById('loading-error-text');
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay.style.display === 'flex') {
+                const msg = e.reason?.message || e.reason || '不明なPromiseエラー';
+                errorText.innerHTML = `内部エラー(非同期)<br><span style="font-size:10px; word-break:break-all;">${msg}</span>`;
+                errorText.innerHTML += `<br><button style="margin-top:10px; padding:6px 12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('loading-overlay').style.display='none';">閉じる</button>`;
+            }
+        });
+
+        // --------------------------------------------------------
+        // ユーティリティ & UIトグル
+        // --------------------------------------------------------
         let apiUsageLog = []; try { apiUsageLog = JSON.parse(localStorage.getItem('vrm_apiUsageLog')) || []; } catch(e) {}
         window.toggleApiStatus = () => { const o = document.getElementById('api-status-overlay'); const b = document.getElementById('status-toggle-btn'); if (o.style.display === 'none' || o.style.display === '') { o.style.display = 'block'; b.style.background = '#4CAF50'; } else { o.style.display = 'none'; b.style.background = 'rgba(0,0,0,0.5)'; } };
         window.toggleActionPad = () => { const p = document.getElementById('action-pad'); p.style.display = (p.style.display === 'none' || p.style.display === '') ? 'grid' : 'none'; };
-        window.toggleSettings = () => { const p = document.getElementById('settings-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; document.getElementById('debug-panel').style.display = 'none'; };
-        window.toggleDebugPanel = () => { const p = document.getElementById('debug-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; document.getElementById('settings-panel').style.display = 'none'; };
-
-        window.testMode = null;
-        window.testPoseValues = { upperArmZ: 1.0, upperArmY: 0.4, lowerArmX: 1.2 };
-        window.testSitPose = () => { window.testMode = 'sit'; console.log('🪑 座りテストモード'); };
-        window.testRaiseArm = () => { window.testMode = 'raise_arm'; console.log('🙌 腕上げテストモード'); };
-        window.testSpeakPose = () => { window.testMode = 'speak'; console.log('🗣️ 話すテストモード'); };
-        window.cancelTest = () => { window.testMode = null; console.log('⏹️ テスト終了'); };
-        window.updateTestValues = () => {
-            window.testPoseValues.upperArmZ = parseFloat(document.getElementById('upperArmZSlider').value);
-            window.testPoseValues.upperArmY = parseFloat(document.getElementById('upperArmYSlider').value);
-            window.testPoseValues.lowerArmX = parseFloat(document.getElementById('lowerArmXSlider').value);
-            document.getElementById('upperArmZValue').textContent = window.testPoseValues.upperArmZ.toFixed(2);
-            document.getElementById('upperArmYValue').textContent = window.testPoseValues.upperArmY.toFixed(2);
-            document.getElementById('lowerArmXValue').textContent = window.testPoseValues.lowerArmX.toFixed(2);
-        };
+        
+        const closeAllPanels = () => { document.getElementById('settings-panel').style.display = 'none'; document.getElementById('debug-panel').style.display = 'none'; document.getElementById('jojo-panel').style.display = 'none'; };
+        window.toggleSettings = () => { const p = document.getElementById('settings-panel'); const isOpen = p.style.display === 'block'; closeAllPanels(); if(!isOpen) p.style.display = 'block'; };
+        window.toggleDebugPanel = () => { const p = document.getElementById('debug-panel'); const isOpen = p.style.display === 'block'; closeAllPanels(); if(!isOpen) p.style.display = 'block'; };
+        window.toggleJojoPanel = () => { const p = document.getElementById('jojo-panel'); const isOpen = p.style.display === 'block'; closeAllPanels(); if(!isOpen) p.style.display = 'block'; };
 
         function recordApiUsage(tokenCount) { apiUsageLog.push({ time: Date.now(), tokens: tokenCount }); apiUsageLog = apiUsageLog.filter(log => log.time > Date.now() - 86400000); localStorage.setItem('vrm_apiUsageLog', JSON.stringify(apiUsageLog)); }
         setInterval(() => { const l = apiUsageLog.filter(log => log.time > Date.now() - 60000); document.getElementById('stat-rpm').textContent = l.length; document.getElementById('stat-tpm').textContent = l.reduce((sum, log) => sum + (log.tokens || 0), 0).toLocaleString(); }, 1000);
 
         let voices = [];
-        function populateVoiceList() {
-            voices = window.speechSynthesis.getVoices(); const vs = document.getElementById('voice-select'); vs.innerHTML = '';
-            voices.forEach((v, i) => { const o = document.createElement('option'); o.textContent = `${v.name} (${v.lang})`; o.value = i; vs.appendChild(o); });
-            const s = localStorage.getItem('vrm_voiceIndex'); if(s !== null && voices[s]) vs.value = s;
-        }
-        populateVoiceList(); if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = populateVoiceList;
-        document.getElementById('voice-select').addEventListener('change', (e) => localStorage.setItem('vrm_voiceIndex', e.target.value));
+        function populateVoiceList() { voices = window.speechSynthesis.getVoices(); const vs = document.getElementById('voice-select'); vs.innerHTML = ''; voices.forEach((v, i) => { const o = document.createElement('option'); o.textContent = `${v.name} (${v.lang})`; o.value = i; vs.appendChild(o); }); const s = localStorage.getItem('vrm_voiceIndex'); if(s !== null && voices[s]) vs.value = s; }
+        populateVoiceList(); if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = populateVoiceList; document.getElementById('voice-select').addEventListener('change', (e) => localStorage.setItem('vrm_voiceIndex', e.target.value));
 
-        const jointManifest = {
-            spine:         { ranges: { x: {min: -0.4, max: 0.4}, y: {min: -0.4, max: 0.4}, z: {min: -0.4, max: 0.4} } },
-            chest:         { ranges: { x: {min: -0.4, max: 0.4}, y: {min: -0.4, max: 0.4}, z: {min: -0.4, max: 0.4} } },
-            neck:          { ranges: { x: {min: -0.6, max: 0.6}, y: {min: -0.8, max: 0.8}, z: {min: -0.5, max: 0.5} } },
-            head:          { ranges: { x: {min: -0.5, max: 0.5}, y: {min: -0.5, max: 0.5}, z: {min: -0.5, max: 0.5} } },
-            leftShoulder:  { ranges: { y: {min: -0.2, max: 0.2}, z: {min: -0.3, max: 0.3} } },
-            rightShoulder: { ranges: { y: {min: -0.2, max: 0.2}, z: {min: -0.3, max: 0.3} } },
-            leftUpperArm:  { ranges: { x: {min: -1.0, max: 1.5}, y: {min: -1.5, max: 1.5}, z: {min: -1.5, max: 1.5} } },
-            rightUpperArm: { ranges: { x: {min: -1.0, max: 1.5}, y: {min: -1.5, max: 1.5}, z: {min: -1.5, max: 1.5} } },
-            leftLowerArm:  { ranges: { x: {min: -0.1, max: 2.8}, y: {min: -1.5, max: 1.5}, z: {min: -1.5, max: 1.5} } },
-            rightLowerArm: { ranges: { x: {min: -0.1, max: 2.8}, y: {min: -1.5, max: 1.5}, z: {min: -1.5, max: 1.5} } },
-            leftHand:      { ranges: { x: {min: -0.5, max: 1.2}, y: {min: -1.0, max: 1.0}, z: {min: -1.0, max: 1.0} } },
-            rightHand:     { ranges: { x: {min: -0.5, max: 1.2}, y: {min: -1.0, max: 1.0}, z: {min: -1.0, max: 1.0} } },
-            leftUpperLeg:  { ranges: { x: {min: -1.6, max: 1.6}, y: {min: -0.5, max: 0.5}, z: {min: -0.5, max: 0.5} } },
-            rightUpperLeg: { ranges: { x: {min: -1.6, max: 1.6}, y: {min: -0.5, max: 0.5}, z: {min: -0.5, max: 0.5} } },
-            leftLowerLeg:  { ranges: { x: {min: -2.8, max: 0.1}, y: {min: -0.1, max: 0.1}, z: {min: -0.1, max: 0.1} } },
-            rightLowerLeg: { ranges: { x: {min: -2.8, max: 0.1}, y: {min: -0.1, max: 0.1}, z: {min: -0.1, max: 0.1} } }
-        };
+        const axisFixCheckbox = document.getElementById('axis-fix');
+        axisFixCheckbox.checked = localStorage.getItem('vrm_axisFix') === 'true';
+        axisFixCheckbox.addEventListener('change', (e) => localStorage.setItem('vrm_axisFix', e.target.checked));
 
-        const correlationMatrix = {
-            'spine.y_to_leftShoulder.z': 0.15,
-            'spine.y_to_rightShoulder.z': -0.15,
-            'spine.y_to_neck.z': 0.2,
-            'spine.z_to_neck.y': 0.1
-        };
+        const useGeminiTtsCheckbox = document.getElementById('use-gemini-tts');
+        useGeminiTtsCheckbox.checked = localStorage.getItem('vrm_useGeminiTts') !== 'false';
+        useGeminiTtsCheckbox.addEventListener('change', (e) => localStorage.setItem('vrm_useGeminiTts', e.target.checked));
+
+        const ttsVoiceSelect = document.getElementById('tts-voice-select');
+        const savedTtsVoice = localStorage.getItem('vrm_ttsVoice');
+        if (savedTtsVoice) ttsVoiceSelect.value = savedTtsVoice;
+        ttsVoiceSelect.addEventListener('change', (e) => localStorage.setItem('vrm_ttsVoice', e.target.value));
+
+        const ttsCustomPromptInput = document.getElementById('tts-custom-prompt');
+        const savedTtsCustomPrompt = localStorage.getItem('vrm_ttsCustomPrompt');
+        if (savedTtsCustomPrompt) ttsCustomPromptInput.value = savedTtsCustomPrompt;
+        ttsCustomPromptInput.addEventListener('change', (e) => localStorage.setItem('vrm_ttsCustomPrompt', e.target.value));
+
 
         const motionPresets = {
-            'stand_idle': {
-                isAnimated: true,
-                animation: (t) => {
-                    const b = Math.sin(t * 1.2), d1 = Math.sin(t * 1.2 - 0.4), d2 = Math.sin(t * 1.2 - 0.8);
-                    return {
-                        chest: { x: b * 0.015 },
-                        spine: { x: d1 * 0.01 },
-                        leftShoulder: { z: 0.08 + b * 0.01 }, rightShoulder: { z: -0.08 - b * 0.01 },
-                        leftUpperArm: { z: 1.15 + d1 * 0.02, x: 0.05 }, rightUpperArm: { z: -1.15 - d1 * 0.02, x: 0.05 },
-                        leftLowerArm: { x: 0.1 + d2 * 0.02 }, rightLowerArm: { x: 0.1 + d2 * 0.02 },
-                        neck: { y: Math.sin(t * 0.4) * 0.4, x: Math.sin(t * 0.6) * 0.2 },
-                        leftHand: { x: 0.1, y: 0, z: -0.05 }, rightHand: { x: 0.1, y: 0, z: 0.05 }
-                    };
-                }
-            },
-            'sit_bench': {
-                isAnimated: true,
-                animation: (t) => {
-                    const b = Math.sin(t * 1.2), d1 = Math.sin(t * 1.2 - 0.4), d2 = Math.sin(t * 1.2 - 0.8);
-                    return {
-                        spine: { x: 0.05 + d1 * 0.01 }, chest: { x: b * 0.015 },
-                        leftUpperLeg: { x: 1.4, z: 0.05 }, rightUpperLeg: { x: 1.4, z: -0.05 },
-                        leftLowerLeg: { x: -1.4 }, rightLowerLeg: { x: -1.4 },
-                        leftShoulder: { z: 0.15 + b * 0.02 }, rightShoulder: { z: -0.15 - b * 0.02 },
-                        
-                        // 🌟 修正: 腕を下ろして太ももに置く自然なリラックスポーズ
-                        leftUpperArm: { y: 0.4 + d1 * 0.02, z: 1.0 }, rightUpperArm: { y: -0.4 - d1 * 0.02, z: -1.0 },
-                        leftLowerArm: { x: 1.2 + d2 * 0.03 }, rightLowerArm: { x: 1.2 + d2 * 0.03 },
-                        neck: { x: 0.2 },
-                        leftHand: { x: 0.1, y: 0, z: -0.05 }, rightHand: { x: 0.1, y: 0, z: 0.05 }
-                    };
-                }
-            },
-            // 🌟 修正: 会話中のボディランゲージにメリハリ（伸縮）を追加
-            'talking_stand': {
-                isAnimated: true,
-                animation: (t) => {
-                    let p1 = Math.sin(t * 2.5), p2 = Math.sin(t * 2.0), p3 = Math.cos(t * 3.0);
-                    let stretch = Math.max(0, Math.sin(t * 0.8)); // 定期的に腕をスッと伸ばす
-                    
-                    let elbowL = (0.8 + Math.abs(p2) * 1.5) * (1.0 - stretch * 0.8);
-                    let elbowR = (0.8 + Math.abs(p3) * 1.5) * (1.0 - stretch * 0.8);
-                    
-                    let upArmZL = -0.2 + p3 * 0.2 - stretch * 0.5;
-                    let upArmZR = 0.2 - p1 * 0.2 + stretch * 0.5;
-                    
-                    return {
-                        spine: { y: Math.sin(t * 0.7) * 0.2, z: Math.sin(t * 0.5) * 0.15, x: Math.sin(t * 2.0) * 0.03 },
-                        leftShoulder: { z: 0.15 + Math.sin(t * 1.2) * 0.08 + (p1 * 0.15), y: Math.sin(t * 1.2) * 0.1 },
-                        rightShoulder: { z: -0.15 - Math.sin(t * 1.2) * 0.08 - (p1 * 0.15), y: Math.sin(t * 1.2) * -0.1 },
-                        neck: { y: Math.sin(t * 0.4) * 0.6, x: Math.sin(t * 0.6) * 0.3, z: Math.sin(t * 0.5) * 0.2 },
-                        leftUpperArm: { z: upArmZL, y: 0.8 + p1 * 0.3 },
-                        rightUpperArm: { z: upArmZR, y: -0.8 - p2 * 0.3 },
-                        leftLowerArm: { x: elbowL, y: p1 * 0.05 }, rightLowerArm: { x: elbowR, y: -p2 * 0.05 },
-                        leftHand: { x: 0.3 + p3 * 0.7, y: p1 * 0.5, z: Math.sin(t * 1.5) * 0.4 },
-                        rightHand: { x: 0.3 + p1 * 0.7, y: -p2 * 0.5, z: Math.sin(t * 1.5) * -0.4 }
-                    };
-                }
-            },
-            'talking_sit': {
-                isAnimated: true,
-                animation: (t) => {
-                    let p1 = Math.sin(t * 2.5), p2 = Math.sin(t * 2.0), p3 = Math.cos(t * 3.0);
-                    let stretch = Math.max(0, Math.sin(t * 0.9)); 
-                    
-                    return {
-                        spine: { y: Math.sin(t * 0.7) * 0.1, z: Math.sin(t * 0.5) * 0.1, x: 0.05 + Math.sin(t * 2.0) * 0.02 },
-                        leftShoulder: { z: 0.15 + (p1 * 0.1) }, rightShoulder: { z: -0.15 - (p1 * 0.1) },
-                        neck: { y: Math.sin(t * 0.4) * 0.4, x: 0.1 + Math.sin(t * 0.6) * 0.2, z: Math.sin(t * 0.5) * 0.1 },
-                        
-                        leftUpperArm: { z: 0.8 - stretch * 0.6 + p3 * 0.1, y: 0.5 + p1 * 0.2 },
-                        rightUpperArm: { z: -0.8 + stretch * 0.6 - p1 * 0.1, y: -0.5 - p2 * 0.2 },
-                        leftLowerArm: { x: (1.4 + Math.abs(p2) * 0.3) * (1 - stretch * 0.8), y: p1 * 0.03 },
-                        rightLowerArm: { x: (1.4 + Math.abs(p3) * 0.3) * (1 - stretch * 0.8), y: -p2 * 0.03 },
-                        
-                        leftHand: { x: 0.3 + p3 * 0.2, y: p1 * 0.15 }, rightHand: { x: 0.3 + p1 * 0.2, y: -p2 * 0.15 }
-                    };
-                }
-            },
-            // 🌟 修正: 睡眠ポーズを追加（Tポーズへのリセットを防止し、自然に脱力する）
-            'sleep_sit': {
-                isAnimated: true,
-                animation: (t) => {
-                    const b = Math.sin(t * 0.8), d1 = Math.sin(t * 0.8 - 0.4);
-                    return {
-                        spine: { x: 0.15 + d1 * 0.02 }, chest: { x: b * 0.01 },
-                        leftUpperLeg: { x: 1.4, z: 0.1 }, rightUpperLeg: { x: 1.4, z: -0.1 },
-                        leftLowerLeg: { x: -1.4 }, rightLowerLeg: { x: -1.4 },
-                        leftShoulder: { z: 0.2 + b * 0.02 }, rightShoulder: { z: -0.2 - b * 0.02 },
-                        leftUpperArm: { y: 0.3, z: 1.1 }, rightUpperArm: { y: -0.3, z: -1.1 }, // 腕をだらんと下ろす
-                        leftLowerArm: { x: 0.5 }, rightLowerArm: { x: 0.5 },
-                        neck: { x: 0.3 + Math.sin(t * 0.5) * 0.1, z: Math.sin(t * 0.3) * 0.05 }, // 首のコックリ
-                        leftHand: { x: 0, y: 0, z: 0 }, rightHand: { x: 0, y: 0, z: 0 }
-                    };
-                }
-            },
-            'sleep_stand': {
-                isAnimated: true,
-                animation: (t) => {
-                    const b = Math.sin(t * 0.8), d1 = Math.sin(t * 0.8 - 0.4);
-                    return {
-                        chest: { x: b * 0.01 }, spine: { x: 0.1 + d1 * 0.02 },
-                        leftShoulder: { z: 0.15 + b * 0.01 }, rightShoulder: { z: -0.15 - b * 0.01 },
-                        leftUpperArm: { z: 1.2, x: 0 }, rightUpperArm: { z: -1.2, x: 0 },
-                        leftLowerArm: { x: 0.05 }, rightLowerArm: { x: 0.05 },
-                        neck: { x: 0.3 + Math.sin(t * 0.5) * 0.1, z: Math.sin(t * 0.3) * 0.05 },
-                        leftHand: { x: 0 }, rightHand: { x: 0 }
-                    };
-                }
-            },
-            'nod': { isAnimated: true, animation: (t) => ({ spine: { x: 0.04 }, neck: { x: Math.sin(t * 8) * 0.15 } }) },
-            'joy': { isAnimated: false, joints: { spine: { x: -0.05 }, leftUpperArm: { x: 0.8, z: 0.2 }, rightUpperArm: { x: 0.8, z: -0.2 }, leftLowerArm: { x: 1.2 }, rightLowerArm: { x: 1.2 } } },
-            'sorrow': { isAnimated: false, joints: { spine: { x: 0.25 }, neck: { x: 0.2 }, leftShoulder: { z: 0.2 }, rightShoulder: { z: -0.2 }, leftUpperArm: { x: 0.2 }, rightUpperArm: { x: 0.2 } } },
-            'surprised': { isAnimated: false, joints: { spine: { x: -0.15 }, neck: { x: -0.1 }, leftUpperArm: { z: 0.5, x: 0.8 }, rightUpperArm: { z: -0.5, x: 0.8 }, leftLowerArm: { x: 1.5 }, rightLowerArm: { x: 1.5 } } },
-            'thinking': { isAnimated: false, joints: { spine: { x: 0.08 }, neck: { x: 0.1, y: 0.1 }, rightUpperArm: { x: 0.5, z: -0.5 }, rightLowerArm: { x: 1.5 } } },
-            'shy': { isAnimated: true, animation: (t) => ({ spine: { x: 0.05 }, leftUpperArm: { x: 0.5, z: 0.5 }, rightUpperArm: { x: 0.5, z: -0.5 }, leftLowerArm: { x: 1.0 }, rightLowerArm: { x: 1.0 } }) }
+            'stand_idle': { isAnimated: true, animation: (t) => { const b = Math.sin(t * 1.2), d1 = Math.sin(t * 1.2 - 0.4), d2 = Math.sin(t * 1.2 - 0.8); return { chest: { x: b * 0.015 }, spine: { x: d1 * 0.01 }, leftShoulder: { z: 0.08 + b * 0.01 }, rightShoulder: { z: -0.08 - b * 0.01 }, leftUpperArm: { z: 1.15 + d1 * 0.02, x: 0.05 }, rightUpperArm: { z: -1.15 - d1 * 0.02, x: 0.05 }, leftLowerArm: { x: 0.1 + d2 * 0.02 }, rightLowerArm: { x: 0.1 + d2 * 0.02 }, neck: { y: Math.sin(t * 0.4) * 0.4, x: Math.sin(t * 0.6) * 0.2 } }; } },
+            'sit_bench': { isAnimated: true, animation: (t) => { const b = Math.sin(t * 1.2), d1 = Math.sin(t * 1.2 - 0.4), d2 = Math.sin(t * 1.2 - 0.8); return { spine: { x: 0.05 + d1 * 0.01 }, chest: { x: b * 0.015 }, leftUpperLeg: { x: 1.4, z: 0.05 }, rightUpperLeg: { x: 1.4, z: -0.05 }, leftLowerLeg: { x: -1.4 }, rightLowerLeg: { x: -1.4 }, leftShoulder: { z: 0.15 + b * 0.02 }, rightShoulder: { z: -0.15 - b * 0.02 }, leftUpperArm: { y: 0.4 + d1 * 0.02, z: 1.0 }, rightUpperArm: { y: -0.4 - d1 * 0.02, z: -1.0 }, leftLowerArm: { x: 1.2 + d2 * 0.03 }, rightLowerArm: { x: 1.2 + d2 * 0.03 }, neck: { x: 0.2 } }; } },
+            'talk_explain': { isAnimated: true, animation: (t) => { let p = Math.sin(t * 2); return { spine: {x: 0.05, y: Math.sin(t) * 0.05}, leftUpperArm: {z: 1.0, x: -0.2, y: p*0.2}, rightUpperArm: {z: -1.0, x: -0.2, y: -p*0.2}, leftLowerArm: {x: 0.5}, rightLowerArm: {x: 0.5} }; } },
+            'talk_passion': { isAnimated: true, animation: (t) => { let p = Math.sin(t * 3); return { spine: {x: 0.2, y: Math.sin(t*1.5)*0.1}, neck: {x: -0.1}, leftUpperArm: {z: 0.5, x: -0.8, y: p*0.1}, rightUpperArm: {z: -0.5, x: -0.8, y: -p*0.1}, leftLowerArm: {x: 1.2}, rightLowerArm: {x: 1.2} }; } },
+            'talk_think': { isAnimated: true, animation: (t) => { let p = Math.sin(t * 1.5); return { spine: {x: 0.05}, neck: {x: 0.1, y: 0.2 + p*0.05}, rightUpperArm: {x: -0.5, z: -0.2}, rightLowerArm: {x: 2.2}, leftUpperArm: {z: 0.5, x: 0.2}, leftLowerArm: {x: 1.2} }; } },
+            'talking_sit': { isAnimated: true, animation: (t) => { let p1 = Math.sin(t * 2.5), p2 = Math.sin(t * 2.0), p3 = Math.cos(t * 3.0); let stretch = Math.max(0, Math.sin(t * 0.9)); return { spine: { y: Math.sin(t * 0.7) * 0.1, z: Math.sin(t * 0.5) * 0.1, x: 0.05 + Math.sin(t * 2.0) * 0.02 }, leftShoulder: { z: 0.15 + (p1 * 0.1) }, rightShoulder: { z: -0.15 - (p1 * 0.1) }, neck: { y: Math.sin(t * 0.4) * 0.4, x: 0.1 + Math.sin(t * 0.6) * 0.2, z: Math.sin(t * 0.5) * 0.1 }, leftUpperArm: { z: 0.8 - stretch * 0.6 + p3 * 0.1, y: 0.5 + p1 * 0.2 }, rightUpperArm: { z: -0.8 + stretch * 0.6 - p1 * 0.1, y: -0.5 - p2 * 0.2 }, leftLowerArm: { x: (1.4 + Math.abs(p2) * 0.3) * (1 - stretch * 0.8), y: p1 * 0.03 }, rightLowerArm: { x: (1.4 + Math.abs(p3) * 0.3) * (1 - stretch * 0.8), y: -p2 * 0.03 } }; } },
+            'sleep_sit': { isAnimated: true, animation: (t) => { const b = Math.sin(t * 0.8), d1 = Math.sin(t * 0.8 - 0.4); return { spine: { x: 0.15 + d1 * 0.02 }, chest: { x: b * 0.01 }, leftUpperLeg: { x: 1.4, z: 0.1 }, rightUpperLeg: { x: 1.4, z: -0.1 }, leftLowerLeg: { x: -1.4 }, rightLowerLeg: { x: -1.4 }, leftShoulder: { z: 0.2 + b * 0.02 }, rightShoulder: { z: -0.2 - b * 0.02 }, leftUpperArm: { y: 0.3, z: 1.1 }, rightUpperArm: { y: -0.3, z: -1.1 }, leftLowerArm: { x: 0.5 }, rightLowerArm: { x: 0.5 }, neck: { x: 0.3 + Math.sin(t * 0.5) * 0.1, z: Math.sin(t * 0.3) * 0.05 } }; } },
+            'sleep_stand': { isAnimated: true, animation: (t) => { const b = Math.sin(t * 0.8), d1 = Math.sin(t * 0.8 - 0.4); return { chest: { x: b * 0.01 }, spine: { x: 0.1 + d1 * 0.02 }, leftShoulder: { z: 0.15 + b * 0.01 }, rightShoulder: { z: -0.15 - b * 0.01 }, leftUpperArm: { z: 1.2, x: 0 }, rightUpperArm: { z: -1.2, x: 0 }, leftLowerArm: { x: 0.05 }, rightLowerArm: { x: 0.05 }, neck: { x: 0.3 + Math.sin(t * 0.5) * 0.1, z: Math.sin(t * 0.3) * 0.05 } }; } },
+            'nod': { isAnimated: true, animation: (t) => { return { neck: { x: Math.sin(t * 5) * 0.15 } }; } },
+            'joy': { isAnimated: true, animation: (t) => { return { chest: { y: Math.abs(Math.sin(t * 4)) * 0.05 }, leftUpperArm: { z: 1.0, x: 0.2 }, rightUpperArm: { z: -1.0, x: 0.2 } }; } },
+            'surprised': { isAnimated: true, animation: (t) => { return { spine: { x: -0.1 }, neck: { x: -0.1 }, leftUpperArm: { z: 0.8, x: 0.5 }, rightUpperArm: { z: -0.8, x: 0.5 } }; } },
+            'jojo_jotaro': { isAnimated: false, joints: { hips: {y: 0.3}, spine: {x: 0.1, z: 0.1}, leftUpperLeg: {x: -0.2}, rightUpperLeg: {x: -0.2}, leftUpperArm: {x: 0.2, z: 0.2}, leftLowerArm: {x: 1.5, z: 1.5}, rightUpperArm: {x: -1.2, z: -0.2}, rightLowerArm: {x: 0.2, z: 0.2} } },
+            'jojo_dio': { isAnimated: false, joints: { hips: {x: -0.3}, spine: {x: -0.5}, chest: {x: -0.4}, neck: {x: -0.4}, leftUpperLeg: {x: 0.3, z: 0.5}, rightUpperLeg: {x: 0.3, z: -0.5}, leftLowerLeg: {x: -0.8}, rightLowerLeg: {x: -0.8}, leftUpperArm: {x: -0.5, z: 1.5}, rightUpperArm: {x: -0.5, z: -1.5}, leftLowerArm: {x: 2.0, z: 2.0}, rightLowerArm: {x: 2.0, z: 2.0} } },
+            'jojo_giorno': { isAnimated: false, joints: { hips: {y: -0.4, z: 0.2}, spine: {x: -0.1, y: 0.2}, leftUpperLeg: {z: 0.2}, rightUpperLeg: {z: -0.2}, leftUpperArm: {z: 0.2, x: 0.1}, leftLowerArm: {x: 0.1, z: 0.1}, rightUpperArm: {x: -0.8, z: -0.5, y: -0.8}, rightLowerArm: {x: 2.0, z: 2.0} } },
+            'jojo_joseph': { isAnimated: false, joints: { hips: {y: 0.5}, spine: {x: 0.2, z: -0.1}, leftUpperLeg: {x: -0.4}, rightUpperLeg: {x: 0.2}, leftUpperArm: {x: 0.2, z: 0.3}, leftLowerArm: {x: 1.2, z: 1.2}, rightUpperArm: {x: -1.4, z: 0, y: 1.0}, rightLowerArm: {x: 0.2, z: 0.2} } },
+            'jojo_josuke': { isAnimated: false, joints: { hips: {z: 0.3, y: 0.3}, spine: {z: -0.2}, leftUpperLeg: {z: 0.2}, rightUpperLeg: {z: -0.2}, leftUpperArm: {x: -0.5, z: 0.5}, leftLowerArm: {x: 1.5, z: 1.5}, rightUpperArm: {x: 0.2, z: -0.2}, rightLowerArm: {x: 0.5, z: 0.5} } },
+            'jojo_jonathan': { isAnimated: false, joints: { hips: {x: 0.1}, spine: {x: -0.1}, leftUpperArm: {x: -1.0, z: 0.8, y: 0.5}, leftLowerArm: {x: 2.0, z: 2.0}, rightUpperArm: {x: 0.5, z: -0.5}, rightLowerArm: {x: 1.5, z: 1.5} } },
+            'jojo_caesar': { isAnimated: false, joints: { hips: {y: -0.5, z: 0.2}, spine: {y: 0.2, z: -0.1}, leftUpperArm: {x: -0.2, z: 0.2, y: 0.8}, leftLowerArm: {x: 2.0, y: -0.5, z: 2.0}, rightUpperArm: {x: -0.2, z: -0.2, y: -0.8}, rightLowerArm: {x: 2.0, y: 0.5, z: 2.0} } },
+            'jojo_kira': { isAnimated: false, joints: { hips: {y: 0.2}, spine: {x: 0.05}, leftUpperArm: {x: 0.1, z: 0.1}, rightUpperArm: {x: -1.0, z: -0.1, y: -0.8}, rightLowerArm: {x: 2.2, z: 2.2} } },
+            'jojo_jolyne': { isAnimated: false, joints: { hips: {z: -0.4, y: -0.3}, spine: {z: 0.3, x: 0.1}, leftUpperLeg: {x: -0.2, z: -0.1}, rightUpperLeg: {x: 0.2, z: 0.3}, leftUpperArm: {x: -1.5, z: 0.8}, leftLowerArm: {x: 0.5, z: 0.5}, rightUpperArm: {x: -1.5, z: -0.8}, rightLowerArm: {x: 0.5, z: 0.5} } },
+            'jojo_bucciarati': { isAnimated: false, joints: { hips: {x: 0.2, y: 0.4, z: 0.1}, spine: {x: 0.1, y: 0.2}, leftUpperLeg: {x: -0.2}, rightUpperLeg: {x: 0.1}, leftUpperArm: {z: 0.3, x: 0.1}, leftLowerArm: {x: 0.2, z: 0.2}, rightUpperArm: {x: -1.0, z: -0.2, y: -0.8}, rightLowerArm: {x: 2.2, z: 2.2} } }
         };
 
-        const DB_NAME = 'VrmStorageDB'; const STORE_NAME = 'VrmStore';
-        function openDB() { return new Promise((r) => { const req = indexedDB.open(DB_NAME, 1); req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME); req.onsuccess = (e) => r(e.target.result); }); }
-        async function saveVRMToIDB(file) { const db = await openDB(); db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put({ file: file, name: file.name }, 'savedVrm'); updateVRMShortcutUI(); }
-        async function loadVRMFromIDB() { const db = await openDB(); return new Promise(r => db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get('savedVrm').onsuccess = e => r(e.target.result)); }
-        async function deleteVRMFromIDB() { const db = await openDB(); db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).delete('savedVrm'); updateVRMShortcutUI(); }
-
-        let chatHistory = JSON.parse(localStorage.getItem('vrm_chatHistory')) || [];
-        let relationMemory = JSON.parse(localStorage.getItem('vrm_relationMemory')) || {};
-        let characterSettings = JSON.parse(localStorage.getItem('vrm_characterSettings')) || null;
+        const DB_NAME = 'VrmStorageDB_v3'; 
+        const STORE_NAME = 'VrmStore';
+        const MOTION_STORE = 'MotionStore'; 
         
+        function openDB() { 
+            return new Promise((r) => { 
+                const req = indexedDB.open(DB_NAME, 1); 
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
+                    if (!db.objectStoreNames.contains(MOTION_STORE)) db.createObjectStore(MOTION_STORE);
+                };
+                req.onsuccess = (e) => r(e.target.result); 
+            }); 
+        }
+        
+        async function saveVRMToIDB(file) {
+            const db = await openDB();
+            db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).getAll().onsuccess = (e) => {
+                let records = e.target.result || [];
+                records = records.filter(r => r.name !== file.name); 
+                records.unshift({ file: file, name: file.name, time: Date.now() }); 
+                if (records.length > 3) records = records.slice(0, 3); 
+                
+                const tx2 = db.transaction(STORE_NAME, 'readwrite');
+                const store2 = tx2.objectStore(STORE_NAME);
+                store2.clear().onsuccess = () => { records.forEach((rec, i) => store2.put(rec, 'vrm_' + i)); updateVRMShortcutUI(); };
+            };
+        }
+
+        async function getSavedVRMs() {
+            const db = await openDB();
+            return new Promise(r => db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).getAll().onsuccess = e => {
+                let records = e.target.result || [];
+                records.sort((a,b) => b.time - a.time); r(records);
+            });
+        }
+
+        function updateVRMShortcutUI() {
+            getSavedVRMs().then(records => {
+                const c = document.getElementById('vrm-shortcut-container');
+                if (records && records.length > 0) {
+                    let html = '<div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 5px; margin-top: 8px; font-size:12px; border: 1px solid #555;"><span style="display:block; margin-bottom:5px;">💾 記憶されたVRMリスト (最大3件):</span>';
+                    records.forEach((r, idx) => {
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding-bottom:4px; border-bottom:1px solid #444;">
+                            <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px;" title="${r.name}">${r.name}</div>
+                            <div style="display:flex; gap:5px;"><button class="action-btn" style="margin:0; padding:4px 8px; background:#4CAF50; width:auto; font-size:11px;" onclick="loadSavedVRM(${idx})">呼出</button><button class="action-btn" style="margin:0; padding:4px 8px; background:#E91E63; width:auto; font-size:11px;" onclick="removeSavedVRM(${idx})">削除</button></div>
+                        </div>`;
+                    });
+                    html += '</div>'; c.innerHTML = html; window.savedVRMRecords = records;
+                } else { c.innerHTML = ''; window.savedVRMRecords = []; }
+            });
+        }
+
+        window.loadSavedVRM = (idx) => { const r = window.savedVRMRecords[idx]; if (r && r.file) loadVRMData(r.file); };
+        window.removeSavedVRM = async (idx) => { const r = window.savedVRMRecords[idx]; if(r) { let records = window.savedVRMRecords.filter((_, i) => i !== idx); const db = await openDB(); const tx = db.transaction(STORE_NAME, 'readwrite'); const store = tx.objectStore(STORE_NAME); store.clear().onsuccess = () => { records.forEach((rec, i) => store.put(rec, 'vrm_' + i)); updateVRMShortcutUI(); }; } };
+        updateVRMShortcutUI();
+
+        window.savedVrmaRecords = [];
+        window.saveVrmaMotion = async () => {
+            const fileInput = document.getElementById('vrma-file');
+            const nameInput = document.getElementById('vrma-name');
+            const file = fileInput.files[0];
+            const name = nameInput.value.trim();
+
+            if (!file || !name) { alert('ファイルと呼出名を入力してください。'); return; }
+
+            const db = await openDB();
+            const tx = db.transaction(MOTION_STORE, 'readwrite');
+            const store = tx.objectStore(MOTION_STORE);
+            
+            const record = { name: name, file: file, time: Date.now() };
+            store.put(record, name).onsuccess = () => {
+                window.updateVrmaUI();
+                fileInput.value = ''; nameInput.value = '';
+                alert(`モーション「${name}」を保存しました！\nGeminiが gesture に "${name}" を指定すると再生されます。`);
+            };
+        };
+
+        async function getSavedVrmas() {
+            const db = await openDB();
+            return new Promise(r => db.transaction(MOTION_STORE, 'readonly').objectStore(MOTION_STORE).getAll().onsuccess = e => {
+                let records = e.target.result || [];
+                records.sort((a,b) => b.time - a.time); r(records);
+            });
+        }
+
+        window.updateVrmaUI = () => {
+            getSavedVrmas().then(records => {
+                window.savedVrmaRecords = records;
+                const c = document.getElementById('vrma-shortcut-container'); 
+                if (records.length > 0) {
+                    let html = '<div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 5px; margin-top: 8px; font-size:12px; border: 1px solid #555;"><span style="display:block; margin-bottom:5px;">🎬 登録済みモーション:</span>';
+                    records.forEach(r => {
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding-bottom:4px; border-bottom:1px solid #444;">
+                            <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px;" title="${r.name}">${r.name}</div>
+                            <div style="display:flex; gap:5px;">
+                                <button class="action-btn" style="margin:0; padding:4px 8px; background:#4CAF50; width:auto; font-size:11px;" onclick="playSavedVrma('${r.name}')">▶</button>
+                                <button class="action-btn" style="margin:0; padding:4px 8px; background:#E91E63; width:auto; font-size:11px;" onclick="removeSavedVrma('${r.name}')">×</button>
+                            </div>
+                        </div>`;
+                    });
+                    html += '</div>'; c.innerHTML = html;
+                } else { c.innerHTML = ''; }
+            });
+        };
+
+        window.removeSavedVrma = async (name) => {
+            const db = await openDB();
+            const tx = db.transaction(MOTION_STORE, 'readwrite');
+            tx.objectStore(MOTION_STORE).delete(name).onsuccess = () => { window.updateVrmaUI(); };
+        };
+        window.updateVrmaUI();
+
+        let chatHistory = JSON.parse(localStorage.getItem('vrm_chatHistory')) || []; let relationMemory = JSON.parse(localStorage.getItem('vrm_relationMemory')) || {}; let characterSettings = JSON.parse(localStorage.getItem('vrm_characterSettings')) || null;
         const apiKeyInput = document.getElementById('api-key'); apiKeyInput.value = localStorage.getItem('vrm_apiKey') || ''; apiKeyInput.addEventListener('change', (e) => localStorage.setItem('vrm_apiKey', e.target.value));
         const postureSlider = document.getElementById('posture-slider'); const postureVal = document.getElementById('posture-val'); let postureOffset = parseFloat(localStorage.getItem('vrm_postureOffset')) || 0.0; postureSlider.value = postureOffset; postureVal.textContent = postureOffset.toFixed(3); postureSlider.addEventListener('input', (e) => { postureOffset = parseFloat(e.target.value); postureVal.textContent = postureOffset.toFixed(3); localStorage.setItem('vrm_postureOffset', postureOffset); });
         const speedSlider = document.getElementById('speed-slider'); const speedVal = document.getElementById('speed-val'); let moveSpeed = parseFloat(localStorage.getItem('vrm_moveSpeed')) || 1.8; speedSlider.value = moveSpeed; speedVal.textContent = moveSpeed.toFixed(1); speedSlider.addEventListener('input', (e) => { moveSpeed = parseFloat(e.target.value); speedVal.textContent = moveSpeed.toFixed(1); localStorage.setItem('vrm_moveSpeed', moveSpeed); });
-        const jsonTextArea = document.getElementById('json-text'); if (characterSettings) jsonTextArea.value = JSON.stringify(characterSettings, null, 2); window.applyJsonText = () => { try { characterSettings = JSON.parse(jsonTextArea.value); localStorage.setItem('vrm_characterSettings', JSON.stringify(characterSettings)); alert('適用完了'); } catch (e) { alert('JSON不正'); } };
-        document.getElementById('memory-file').addEventListener('change', (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { try { relationMemory = JSON.parse(ev.target.result); localStorage.setItem('vrm_relationMemory', JSON.stringify(relationMemory)); alert('復元しました！'); } catch (err) { alert('失敗'); } }; r.readAsText(f); });
+        
+        // --------------------------------------------------------
+        // Three.js シーン設定
+        // --------------------------------------------------------
+        const scene = new THREE.Scene(); const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 50); camera.position.set(0, 1.4, 4.2); 
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); renderer.setSize(window.innerWidth, window.innerHeight); renderer.setPixelRatio(window.devicePixelRatio); document.body.appendChild(renderer.domElement);
+        const controls = new OrbitControls(camera, renderer.domElement); controls.target.set(0, 1.0, 0); controls.enableDamping = true; controls.dampingFactor = 0.05; controls.enablePan = true; 
+        let isCameraFollowing = true; controls.addEventListener('start', () => { isCameraFollowing = false; }); window.resetCamera = () => { isCameraFollowing = true; };
+        const light = new THREE.DirectionalLight(0xffffff, 1.5); light.position.set(1, 1, 1).normalize(); scene.add(light); scene.add(new THREE.AmbientLight(0xffffff, 0.6)); scene.add(new THREE.GridHelper(20, 20, 0xaaaaaa, 0xdddddd));
 
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 50);
-        camera.position.set(0, 1.4, 4.2); 
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight); renderer.setPixelRatio(window.devicePixelRatio);
-        document.body.appendChild(renderer.domElement);
-
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.target.set(0, 1.0, 0); 
-        controls.enableDamping = true; controls.dampingFactor = 0.05;
-        controls.enablePan = true; 
-
-        let isCameraFollowing = true;
-        controls.addEventListener('start', () => { isCameraFollowing = false; });
-        window.resetCamera = () => { isCameraFollowing = true; };
-
-        const light = new THREE.DirectionalLight(0xffffff, 1.5);
-        light.position.set(1, 1, 1).normalize(); scene.add(light); scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        scene.add(new THREE.GridHelper(20, 20, 0xaaaaaa, 0xdddddd));
-
-        const benchGroup = new THREE.Group();
-        const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: 0.8 });
+        const benchGroup = new THREE.Group(); const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: 0.8 });
         const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.4), woodMat); seat.position.set(0, 0.35, 0); benchGroup.add(seat);
         const back = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.25, 0.05), woodMat); back.position.set(0, 0.55, -0.175); benchGroup.add(back);
         const legGeo = new THREE.BoxGeometry(0.05, 0.35, 0.05); const legMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 });
-        [[-0.5, 0.15], [0.5, 0.15], [-0.5, -0.15], [0.5, -0.15]].forEach(p => { const leg = new THREE.Mesh(legGeo, legMat); leg.position.set(p[0], 0.175, p[1]); benchGroup.add(leg); });
-        benchGroup.position.set(1.0, 0, -1.2); scene.add(benchGroup);
+        [[-0.5, 0.15], [0.5, 0.15], [-0.5, -0.15], [0.5, -0.15]].forEach(p => { const leg = new THREE.Mesh(legGeo, legMat); leg.position.set(p[0], 0.175, p[1]); benchGroup.add(leg); }); benchGroup.position.set(1.0, 0, -1.2); scene.add(benchGroup);
 
-        let currentVrm = null;
-        let baseState = 'listening'; let currentAction = null;    
-        let gestureTimer = 0; let idleTime = 0; let walkBlend = 0; 
-        let isSpeaking = false; let lipSyncTimer = 0;
-        let aiTargetPosition = null; let aiActionAfterArrival = null;
+        let currentVrm = null; 
+        let currentMixer = null; 
+        let currentAnimationAction = null; 
+        let isVrmaPlaying = false; 
+        
+        let baseState = 'listening'; let currentAction = null; let gestureTimer = 0; let idleTime = 0; let walkBlend = 0; let isSpeaking = false; let lipSyncTimer = 0; let aiTargetPosition = null; let aiActionAfterArrival = null;
+        const clock = new THREE.Clock(); 
+        
+        const loader = new GLTFLoader(); 
+        loader.register((p) => new VRMLoaderPlugin(p));
+        loader.register((p) => new VRMAnimationLoaderPlugin(p)); 
 
-        const clock = new THREE.Clock(); const loader = new GLTFLoader(); loader.register((p) => new VRMLoaderPlugin(p));
         let basePosition = new THREE.Vector3(0, 0, 0); let moveInput = { x: 0, y: 0, z: 0 };
+
+        window.resetPoseState = function() {
+            window.currentOffsetQuats = {};
+            if (currentVrm) currentVrm.humanoid.resetPose();
+        };
+
+        window.standUpFromChair = function() {
+            if (baseState === 'sit_bench') {
+                baseState = 'listening'; basePosition.z = -0.7; window.resetPoseState();
+            }
+        };
+
+        const stopMoveGlobal = () => { if(!aiTargetPosition) moveInput = {x: 0, y: 0, z: 0}; };
+        window.addEventListener('mouseup', stopMoveGlobal); window.addEventListener('touchend', stopMoveGlobal);
+        const triggerMove = (e, dx, dy, dz) => { 
+            if(e) e.preventDefault(); 
+            window.standUpFromChair();
+            if(currentAnimationAction) { currentAnimationAction.fadeOut(0.3); isVrmaPlaying = false; }
+            aiTargetPosition = null; aiActionAfterArrival = null; baseState = 'listening'; currentAction = null; gestureTimer = 0; moveInput = {x: dx, y: dy, z: dz}; idleTime = 0; 
+        };
+        const setupPadBtn = (id, dx, dy, dz) => { const btn = document.getElementById(id); btn.addEventListener('mousedown', (e) => triggerMove(e, dx, dy, dz)); btn.addEventListener('touchstart', (e) => triggerMove(e, dx, dy, dz)); };
+        setupPadBtn('btn-up', 0, 0, -1); setupPadBtn('btn-down', 0, 0, 1); setupPadBtn('btn-left', -1, 0, 0); setupPadBtn('btn-right', 1, 0, 0); setupPadBtn('btn-fly', 0, 1, 0);
+
+        window.testMode = null;
+        window.triggerSitAction = () => { idleTime = 16; }; 
+        window.playTalkGesture = (poseName) => { window.standUpFromChair(); window.resetPoseState(); currentAction = poseName; gestureTimer = 99999; isSpeaking = true; };
+        window.playJojo = (poseName) => { 
+            if(poseName) { window.standUpFromChair(); window.resetPoseState(); currentAction = poseName; gestureTimer = 99999; } 
+            else { window.cancelTest(); } 
+        };
+        window.cancelTest = () => { window.testMode = null; currentAction = null; gestureTimer = 0; isSpeaking = false; isVrmaPlaying = false; if(currentAnimationAction) currentAnimationAction.stop(); window.resetPoseState(); };
+
+        window.playSavedVrma = async (name) => {
+            const record = window.savedVrmaRecords.find(r => r.name === name);
+            if (!record || !record.file || !currentVrm || !currentMixer) return;
+            
+            window.standUpFromChair();
+            window.cancelTest(); 
+            
+            const url = URL.createObjectURL(record.file);
+            loader.load(url, (gltf) => {
+                const vrmAnimations = gltf.userData.vrmAnimations;
+                if (!vrmAnimations || vrmAnimations.length === 0) {
+                    URL.revokeObjectURL(url); return;
+                }
+                
+                currentVrm.humanoid.resetPose();
+                currentVrm.scene.updateMatrixWorld(true);
+
+                const clip = vrmAnimations[0].createAnimationClip(currentVrm);
+                
+                if (currentAnimationAction) { currentAnimationAction.fadeOut(0.3); }
+                
+                currentAnimationAction = currentMixer.clipAction(clip);
+                currentAnimationAction.setLoop(THREE.LoopOnce);
+                currentAnimationAction.clampWhenFinished = true;
+                
+                currentMixer.addEventListener('finished', function restoreProcedural(e) {
+                    if (e.action === currentAnimationAction) {
+                        isVrmaPlaying = false;
+                        window.resetPoseState();
+                        currentMixer.removeEventListener('finished', restoreProcedural);
+                    }
+                });
+                
+                isVrmaPlaying = true;
+                currentAnimationAction.reset().fadeIn(0.3).play();
+                setTimeout(() => URL.revokeObjectURL(url), 10000); 
+            });
+        };
+
+        window.currentRestPose = null;
 
         function loadVRMData(file) {
             const overlay = document.getElementById('loading-overlay');
             const errorText = document.getElementById('loading-error-text');
-            overlay.style.display = 'flex';
-            errorText.textContent = '';
-            
-            loader.load(
-                URL.createObjectURL(file), 
-                (gltf) => {
-                    if (currentVrm) scene.remove(currentVrm.scene);
-                    currentVrm = gltf.userData.vrm; scene.add(currentVrm.scene);
-                    
-                    currentVrm.scene.rotation.y = Math.PI;
+            overlay.style.display = 'flex'; errorText.innerHTML = '';
 
-                    currentVrm.humanoid.resetPose(); currentVrm.update(0); if (currentVrm.springBoneManager) currentVrm.springBoneManager.reset();
-                    basePosition.set(0, 0, 0); idleTime = 0; aiTargetPosition = null; aiActionAfterArrival = null;
-                    baseState = 'listening'; currentAction = null; gestureTimer = 0; moveInput = {x:0, y:0, z:0};
-                    
-                    window.currentQuats = {}; window.currentSitOffset = 0; isCameraFollowing = true; 
-                    overlay.style.display = 'none'; document.getElementById('settings-panel').style.display = 'none';
-                },
-                undefined,
-                (error) => {
-                    console.error("VRMの読み込みエラー:", error);
-                    errorText.innerHTML = `読み込みに失敗しました。<br>ファイルを直接ダブルクリックで開いている場合、<br>ブラウザのセキュリティ制限(CORS)によりブロックされます。<br><br>VSCodeのLive Serverなどのローカルサーバー経由で開いてください。<br><br><span style="color:#aaa;">詳細: ${error.message || error}</span>`;
-                    setTimeout(() => { overlay.style.display = 'none'; }, 6000);
-                }
-            );
+            const url = URL.createObjectURL(file);
+
+            try {
+                loader.load(
+                    url, 
+                    (gltf) => {
+                        if (currentVrm) scene.remove(currentVrm.scene); 
+                        currentVrm = gltf.userData.vrm; 
+                        scene.add(currentVrm.scene); 
+                        currentVrm.scene.rotation.y = Math.PI;
+                        
+                        if (currentVrm.lookAt) {
+                            currentVrm.lookAt.target = camera;
+                        }
+
+                        currentMixer = new THREE.AnimationMixer(currentVrm.scene);
+                        currentAnimationAction = null;
+                        isVrmaPlaying = false;
+                        
+                        basePosition.set(0, 0, 0); idleTime = 0; aiTargetPosition = null; aiActionAfterArrival = null; 
+                        baseState = 'listening'; currentAction = null; gestureTimer = 0; isCameraFollowing = true; 
+                        window.currentSitOffset = 0;
+                        
+                        currentVrm.humanoid.resetPose();
+                        currentVrm.scene.updateMatrixWorld(true);
+                        window.currentRestPose = {};
+                        for (const boneName of Object.values(VRMHumanBoneName)) {
+                            const node = currentVrm.humanoid.getNormalizedBoneNode(boneName);
+                            if (node) window.currentRestPose[boneName] = node.quaternion.clone();
+                        }
+
+                        window.resetPoseState();
+                        if (currentVrm.springBoneManager) currentVrm.springBoneManager.reset();
+                        
+                        overlay.style.display = 'none'; document.getElementById('settings-panel').style.display = 'none';
+                        setTimeout(() => URL.revokeObjectURL(url), 10000); 
+                    },
+                    undefined,
+                    (error) => {
+                        const detail = (error && (error.message || error.toString())) || '不明なエラー';
+                        errorText.innerHTML = `読み込み失敗<br><span style="font-size:10px; word-break:break-all;">${detail}</span>`;
+                        errorText.innerHTML += `<br><button style="margin-top:10px; padding:6px 12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('loading-overlay').style.display='none';">閉じる</button>`;
+                    }
+                );
+            } catch (e) {
+                errorText.innerHTML = `例外発生<br><span style="font-size:10px; word-break:break-all;">${e.message || e}</span>`;
+                errorText.innerHTML += `<br><button style="margin-top:10px; padding:6px 12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('loading-overlay').style.display='none';">閉じる</button>`;
+            }
         }
-        
         document.getElementById('vrm-file').addEventListener('change', (e) => { if (e.target.files[0]) { loadVRMData(e.target.files[0]); saveVRMToIDB(e.target.files[0]); } });
-        function updateVRMShortcutUI() { loadVRMFromIDB().then(d => { const c = document.getElementById('vrm-shortcut-container'); if (d && d.file) { c.innerHTML = `<div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 5px; margin-top: 8px; font-size:12px; border: 1px solid #555;"><span style="display:block; margin-bottom:5px;">💾 記憶されたVRM: <br>${d.name}</span><div style="display:flex; gap:5px;"><button class="action-btn" style="margin-top:0; background:#4CAF50;" onclick="loadSavedVRM()">呼出</button><button class="action-btn" style="margin-top:0; background:#E91E63;" onclick="removeSavedVRM()">削除</button></div></div>`; } else { c.innerHTML = ''; } }); }
-        window.loadSavedVRM = () => { loadVRMFromIDB().then(d => { if (d && d.file) loadVRMData(d.file); }); }; window.removeSavedVRM = () => { deleteVRMFromIDB(); }; updateVRMShortcutUI();
-
-        const stopMoveGlobal = () => { if(!aiTargetPosition) moveInput = {x: 0, y: 0, z: 0}; };
-        window.addEventListener('mouseup', stopMoveGlobal); window.addEventListener('touchend', stopMoveGlobal);
-        const setupPadBtn = (id, dx, dy, dz) => {
-            const btn = document.getElementById(id);
-            const trigger = (e) => { e.preventDefault(); aiTargetPosition = null; baseState = 'listening'; currentAction = null; gestureTimer = 0; moveInput = {x: dx, y: dy, z: dz}; idleTime = 0; };
-            btn.addEventListener('mousedown', trigger); btn.addEventListener('touchstart', trigger);
-        };
-        setupPadBtn('btn-up', 0, 0, -1); setupPadBtn('btn-down', 0, 0, 1); setupPadBtn('btn-left', -1, 0, 0); setupPadBtn('btn-right', 1, 0, 0); setupPadBtn('btn-fly', 0, 1, 0);
 
         const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
         function smoothRotate(current, target, speed) { let d = target - current; while (d < -Math.PI) d += Math.PI * 2; while (d > Math.PI) d -= Math.PI * 2; return current + d * speed; }
 
         function applyPreset(poseObj, presetName, t) {
-            const p = motionPresets[presetName];
-            if (!p) return;
+            const p = motionPresets[presetName]; if (!p) return;
             const data = p.isAnimated ? p.animation(t) : p.joints;
-            for (let joint in data) {
-                if (!poseObj[joint]) continue;
-                for (let axis in data[joint]) {
-                    poseObj[joint][axis] = data[joint][axis];
-                }
-            }
-        }
-
-        function applyCorrelations(poseObj) {
-            for (let key in correlationMatrix) {
-                const [src, tgt] = key.split('_to_');
-                const [sJ, sA] = src.split('.');
-                const [tJ, tA] = tgt.split('.');
-                if (!poseObj[sJ] || !poseObj[tJ]) continue;
-                const val = poseObj[sJ][sA] || 0;
-                poseObj[tJ][tA] = (poseObj[tJ][tA] || 0) + val * correlationMatrix[key];
-            }
-        }
-
-        function clampPoses(poseObj) {
-            for (let joint in poseObj) {
-                if (!jointManifest[joint]) continue;
-                for (let axis in poseObj[joint]) {
-                    const range = jointManifest[joint].ranges[axis];
-                    if (range) {
-                        poseObj[joint][axis] = Math.max(range.min, Math.min(range.max, poseObj[joint][axis]));
-                    }
-                }
+            for (let joint in data) { 
+                if (!poseObj[joint]) poseObj[joint] = {x:0, y:0, z:0};
+                for (let axis in data[joint]) poseObj[joint][axis] = data[joint][axis]; 
             }
         }
 
         function updateAnimation(deltaTime, elapsedTime) {
-            if (!currentVrm) return;
-            const humanoid = currentVrm.humanoid; const expressions = currentVrm.expressionManager;
-            let isMoving = (moveInput.x !== 0 || moveInput.y !== 0 || moveInput.z !== 0);
+            if (!currentVrm) return; 
+            const humanoid = currentVrm.humanoid;
+            const expressions = currentVrm.expressionManager;
+            
+            if (isVrmaPlaying) { 
+                currentMixer.update(deltaTime); 
+                currentVrm.update(deltaTime);
+                return; 
+            }
 
-            if (!isMoving && walkBlend === 0 && baseState !== 'sit_bench' && !aiTargetPosition && currentAction === null) {
-                if (idleTime > 15 && !window.testMode) { aiTargetPosition = new THREE.Vector3(1.0, 0, -1.1); aiActionAfterArrival = 'sit'; }
+            let isMoving = (moveInput.x !== 0 || moveInput.y !== 0 || moveInput.z !== 0);
+            let isJojoPose = currentAction && currentAction.startsWith('jojo_');
+            
+            if (isMoving || currentAction !== null || isSpeaking || isVrmaPlaying) { 
+                idleTime = 0; 
+            } else { 
+                idleTime += deltaTime; 
+            }
+
+            if (!isMoving && walkBlend === 0 && baseState !== 'sit_bench' && !aiTargetPosition && currentAction === null && !isJojoPose && aiActionAfterArrival === null && !isVrmaPlaying) {
+                if (idleTime > 15 && !window.testMode) { aiTargetPosition = new THREE.Vector3(1.0, 0, -0.7); aiActionAfterArrival = 'turning_for_sit'; }
             }
 
             if (aiTargetPosition) {
@@ -468,205 +598,330 @@
                     moveInput = { x: dir.x, y: 0, z: dir.z }; isMoving = true; idleTime = 0;
                 } else {
                     moveInput = { x: 0, y: 0, z: 0 }; isMoving = false; aiTargetPosition = null;
-                    if (aiActionAfterArrival === 'sit') { baseState = 'sit_bench'; currentAction = null; gestureTimer = 0; }
-                    aiActionAfterArrival = null;
+                    if (aiActionAfterArrival === 'turning_for_sit') aiActionAfterArrival = 'turning'; 
                 }
             }
 
-            humanoid.resetPose();
-            walkBlend += isMoving ? deltaTime * 6 : -deltaTime * 6; walkBlend = clamp(walkBlend, 0, 1);
-            
-            if (isMoving || currentAction !== null || isSpeaking) { idleTime = 0; } else { idleTime += deltaTime; }
-
-            // 🌟 修正: 睡眠中の表情を細かく制御
-            if (baseState === 'sit_bench' && idleTime > 60 && !window.testMode) {
-                expressions.setValue('blink', 1.0); // 完全に目を閉じる
-            } else if (baseState === 'sit_bench' && idleTime > 45 && !window.testMode) {
-                expressions.setValue('blink', 0.8 + Math.sin(elapsedTime * 3) * 0.2); // うとうと
-            } else {
-                let isBlinkFrame = (elapsedTime % 4 > 3.8);
-                expressions.setValue('blink', isBlinkFrame ? 1.0 : 0.0);
+            if (aiActionAfterArrival === 'turning') {
+                const targetRot = Math.PI; let diff = Math.abs((currentVrm.scene.rotation.y % (Math.PI*2)) - targetRot);
+                if (diff > Math.PI) diff = Math.PI * 2 - diff;
+                if (diff < 0.1) aiActionAfterArrival = 'step_back_sit'; 
+                idleTime = 0; 
             }
 
-            if (isSpeaking) { lipSyncTimer -= deltaTime; if (lipSyncTimer <= 0) { expressions.setValue('aa', Math.random() * 0.5); expressions.setValue('ou', Math.random() * 0.3); lipSyncTimer = 0.08 + Math.random() * 0.1; } } 
-            else { expressions.setValue('aa', 0); expressions.setValue('ou', 0); }
+            if (aiActionAfterArrival === 'step_back_sit') {
+                basePosition.z -= 1.5 * deltaTime;
+                if (basePosition.z <= -1.15) { basePosition.z = -1.15; baseState = 'sit_bench'; currentAction = null; gestureTimer = 0; aiActionAfterArrival = null; window.resetPoseState(); }
+                idleTime = 0;
+            }
+
+            walkBlend += isMoving ? deltaTime * 6 : -deltaTime * 6; walkBlend = clamp(walkBlend, 0, 1);
+
+            if (expressions) {
+                if (idleTime > 60 && !isJojoPose && !window.testMode && !isVrmaPlaying) { expressions.setValue('blink', 1.0); } 
+                else if (idleTime > 45 && !isJojoPose && !window.testMode && !isVrmaPlaying) { expressions.setValue('blink', 0.8 + Math.sin(elapsedTime * 3) * 0.2); } 
+                else { let isBlinkFrame = (elapsedTime % 4 > 3.8); expressions.setValue('blink', isBlinkFrame ? 1.0 : 0.0); }
+
+                if (isSpeaking) {
+                    lipSyncTimer -= deltaTime;
+                    if (lipSyncTimer <= 0) {
+                        expressions.setValue('aa', Math.random() * 0.6); expressions.setValue('ih', Math.random() * 0.2); expressions.setValue('ou', Math.random() * 0.4);
+                        lipSyncTimer = 0.08 + Math.random() * 0.1;
+                    }
+                } else { ['aa', 'ih', 'ou', 'ee', 'oh'].forEach(v => expressions.setValue(v, 0)); }
+            }
 
             if (isMoving) {
                 basePosition.x += moveInput.x * moveSpeed * deltaTime; basePosition.y += moveInput.y * moveSpeed * deltaTime; basePosition.z += moveInput.z * moveSpeed * deltaTime;
                 if (basePosition.y < 0) basePosition.y = 0;
-                if (moveInput.x !== 0 || moveInput.z !== 0) {
-                    currentVrm.scene.rotation.y = smoothRotate(currentVrm.scene.rotation.y, Math.atan2(moveInput.x, moveInput.z) + Math.PI, 10 * deltaTime);
-                }
+                if (moveInput.x !== 0 || moveInput.z !== 0) currentVrm.scene.rotation.y = smoothRotate(currentVrm.scene.rotation.y, Math.atan2(moveInput.x, moveInput.z) + Math.PI, 10 * deltaTime);
+            } else if (aiActionAfterArrival === 'turning') {
+                currentVrm.scene.rotation.y = smoothRotate(currentVrm.scene.rotation.y, Math.PI, 10 * deltaTime);
             } else {
                 currentVrm.scene.rotation.y = smoothRotate(currentVrm.scene.rotation.y, Math.PI, (baseState === 'sit_bench' ? 8 : 5) * deltaTime);
                 if (basePosition.y > 0 && moveInput.y === 0) { basePosition.y -= moveSpeed * deltaTime; if (basePosition.y < 0) basePosition.y = 0; }
             }
 
-            let targetPose = {
-                spine: {x:0, y:0, z:0}, chest: {x:0, y:0, z:0}, neck: {x:0, y:0, z:0}, head: {x:0, y:0, z:0},
-                leftShoulder: {x:0, y:0, z:0}, rightShoulder: {x:0, y:0, z:0},
-                leftUpperArm: {x:0, y:0, z:0}, rightUpperArm: {x:0, y:0, z:0},
-                leftLowerArm: {x:0, y:0, z:0}, rightLowerArm: {x:0, y:0, z:0},
-                leftHand: {x:0, y:0, z:0}, rightHand: {x:0, y:0, z:0},
-                leftUpperLeg: {x:0, y:0, z:0}, rightUpperLeg: {x:0, y:0, z:0},
-                leftLowerLeg: {x:0, y:0, z:0}, rightLowerLeg: {x:0, y:0, z:0}
-            };
-            let sitDownOffset = 0;
-
-            // 🌟 修正: 睡眠ポーズの呼び出しを統合
-            let currentPreset = baseState === 'sit_bench' ? 'sit_bench' : 'stand_idle';
-            if (baseState === 'sit_bench' && idleTime > 60 && !isSpeaking && !window.testMode) {
-                currentPreset = 'sleep_sit';
-            }
+            let sitDownOffset = baseState === 'sit_bench' ? 0.42 : 0;
+            const lerpFactor = 0.15; 
             
-            applyPreset(targetPose, currentPreset, elapsedTime);
-            if (baseState === 'sit_bench') sitDownOffset = 0.42;
+            let targetPose = {};
+            for(const b of Object.values(VRMHumanBoneName)) { targetPose[b] = {x:0, y:0, z:0}; }
 
             if (currentAction && currentAction !== 'null') {
                 applyPreset(targetPose, currentAction, elapsedTime);
-                gestureTimer -= deltaTime;
-                if (gestureTimer <= 0) currentAction = null;
-                if (currentAction === 'shy') currentVrm.scene.rotation.y += Math.sin(elapsedTime * 2) * 0.08;
-            } else if (isSpeaking && !isMoving) {
-                applyPreset(targetPose, baseState === 'sit_bench' ? 'talking_sit' : 'talking_stand', elapsedTime);
+                if(gestureTimer < 1000) gestureTimer -= deltaTime; 
+                if (gestureTimer <= 0) { currentAction = null; window.resetPoseState(); }
+                if (currentAction === 'jojo_dio') sitDownOffset = 0.3;
+                if (currentAction === 'jojo_joseph') sitDownOffset = 0.1;
+                if (currentAction === 'jojo_jolyne') sitDownOffset = 0.15;
+            } else {
+                let currentPreset = baseState === 'sit_bench' ? 'sit_bench' : 'stand_idle';
+                if (idleTime > 60 && !isSpeaking && !window.testMode) { currentPreset = baseState === 'sit_bench' ? 'sleep_sit' : 'sleep_stand'; }
+                applyPreset(targetPose, currentPreset, elapsedTime);
+                if (isSpeaking && !isMoving && baseState === 'sit_bench') { applyPreset(targetPose, 'talking_sit', elapsedTime); }
             }
 
             if (walkBlend > 0) {
                 if (basePosition.y > 0.1) {
-                    targetPose.spine.x += 0.2 * walkBlend;
-                    targetPose.leftUpperArm.z = 0.2 * walkBlend; targetPose.rightUpperArm.z = -0.2 * walkBlend;
-                    targetPose.leftUpperArm.y = 0.5 * walkBlend; targetPose.rightUpperArm.y = -0.5 * walkBlend;
-                    targetPose.leftLowerArm.x = 0.8 * walkBlend; targetPose.rightLowerArm.x = 0.8 * walkBlend;
-                    targetPose.leftUpperLeg.x += 0.3 * walkBlend; targetPose.rightUpperLeg.x += 0.3 * walkBlend;
-                    targetPose.leftLowerLeg.x += -0.5 * walkBlend; targetPose.rightLowerLeg.x += -0.5 * walkBlend;
+                    targetPose.spine.x += 0.2 * walkBlend; targetPose.leftUpperArm.z = 0.2 * walkBlend; targetPose.rightUpperArm.z = -0.2 * walkBlend; targetPose.leftUpperArm.y = 0.5 * walkBlend; targetPose.rightUpperArm.y = -0.5 * walkBlend; targetPose.leftLowerArm.x = 0.8 * walkBlend; targetPose.rightLowerArm.x = 0.8 * walkBlend; targetPose.leftUpperLeg.x += 0.3 * walkBlend; targetPose.rightUpperLeg.x += 0.3 * walkBlend; targetPose.leftLowerLeg.x += -0.5 * walkBlend; targetPose.rightLowerLeg.x += -0.5 * walkBlend;
                 } else {
                     const walkPhase = elapsedTime * (10 + moveSpeed * 1.5);
                     let sinP = Math.sin(walkPhase); let cosP = Math.cos(walkPhase);
-
-                    targetPose.spine.x += 0.05 * walkBlend; targetPose.spine.y += sinP * 0.05 * walkBlend; targetPose.chest.y += sinP * 0.05 * walkBlend;
-                    targetPose.leftShoulder.y += sinP * 0.08 * walkBlend; targetPose.rightShoulder.y += -sinP * 0.08 * walkBlend;
-                    
-                    targetPose.leftUpperLeg.x += sinP * 0.6 * walkBlend; targetPose.rightUpperLeg.x += -sinP * 0.6 * walkBlend;
-                    targetPose.leftLowerLeg.x += -Math.pow(Math.max(0, cosP), 1.5) * 1.2 * walkBlend;
-                    targetPose.rightLowerLeg.x += -Math.pow(Math.max(0, -cosP), 1.5) * 1.2 * walkBlend;
-
-                    targetPose.leftUpperArm.y += sinP * 0.6 * walkBlend; targetPose.rightUpperArm.y += sinP * 0.6 * walkBlend;
-                    
-                    let leftElbowX = (-sinP * 0.5) > 0 ? (-sinP * 0.5) * 1.2 : 0;
-                    let rightElbowX = (sinP * 0.5) > 0 ? (sinP * 0.5) * 1.2 : 0;
-                    targetPose.leftLowerArm.x += leftElbowX * walkBlend;
-                    targetPose.rightLowerArm.x += rightElbowX * walkBlend;
-                    
+                    targetPose.spine.x += 0.05 * walkBlend; targetPose.spine.y += sinP * 0.05 * walkBlend; targetPose.chest.y += sinP * 0.05 * walkBlend; targetPose.leftShoulder.y += sinP * 0.08 * walkBlend; targetPose.rightShoulder.y += -sinP * 0.08 * walkBlend; targetPose.leftUpperLeg.x += sinP * 0.6 * walkBlend; targetPose.rightUpperLeg.x += -sinP * 0.6 * walkBlend; targetPose.leftLowerLeg.x += -Math.pow(Math.max(0, cosP), 1.5) * 1.2 * walkBlend; targetPose.rightLowerLeg.x += -Math.pow(Math.max(0, -cosP), 1.5) * 1.2 * walkBlend; targetPose.leftUpperArm.y += sinP * 0.6 * walkBlend; targetPose.rightUpperArm.y += sinP * 0.6 * walkBlend;
+                    let leftElbowX = (-sinP * 0.5) > 0 ? (-sinP * 0.5) * 1.2 : 0; let rightElbowX = (sinP * 0.5) > 0 ? (sinP * 0.5) * 1.2 : 0;
+                    targetPose.leftLowerArm.x += leftElbowX * walkBlend; targetPose.rightLowerArm.x += rightElbowX * walkBlend;
                     currentVrm.scene.position.y += Math.abs(sinP) * 0.03 * walkBlend;
                 }
             }
 
-            if (window.testMode) {
-                if (window.testMode === 'sit') {
-                    applyPreset(targetPose, 'sit_bench', elapsedTime);
-                    targetPose.leftUpperArm.z = window.testPoseValues.upperArmZ; targetPose.rightUpperArm.z = -window.testPoseValues.upperArmZ;
-                    targetPose.leftUpperArm.y = window.testPoseValues.upperArmY; targetPose.rightUpperArm.y = -window.testPoseValues.upperArmY;
-                    targetPose.leftLowerArm.x = window.testPoseValues.lowerArmX; targetPose.rightLowerArm.x = window.testPoseValues.lowerArmX;
-                } else if (window.testMode === 'raise_arm') {
-                    targetPose.leftUpperArm.z = -1.0 + window.testPoseValues.upperArmZ; targetPose.rightUpperArm.z = 1.0 - window.testPoseValues.upperArmZ;
-                    targetPose.leftUpperArm.y = window.testPoseValues.upperArmY; targetPose.rightUpperArm.y = -window.testPoseValues.upperArmY;
-                    targetPose.leftLowerArm.x = window.testPoseValues.lowerArmX; targetPose.rightLowerArm.x = window.testPoseValues.lowerArmX;
-                } else if (window.testMode === 'speak') {
-                    let t = elapsedTime;
-                    targetPose.leftUpperArm.z = -window.testPoseValues.upperArmZ + Math.cos(t * 3) * 0.2;
-                    targetPose.rightUpperArm.z = window.testPoseValues.upperArmZ - Math.sin(t * 2.5) * 0.2;
-                    targetPose.leftUpperArm.y = window.testPoseValues.upperArmY + Math.sin(t * 2.5) * 0.3;
-                    targetPose.rightUpperArm.y = -window.testPoseValues.upperArmY - Math.cos(t * 2) * 0.3;
-                    targetPose.leftLowerArm.x = window.testPoseValues.lowerArmX + Math.abs(Math.sin(t * 2)) * 0.6;
-                    targetPose.rightLowerArm.x = window.testPoseValues.lowerArmX + Math.abs(Math.cos(t * 2)) * 0.6;
-                }
+            const useAxisFix = document.getElementById('axis-fix').checked;
+            if (useAxisFix) {
+                const swapJoints = ['leftLowerArm', 'rightLowerArm', 'leftUpperArm', 'rightUpperArm', 'leftUpperLeg', 'rightUpperLeg', 'leftLowerLeg', 'rightLowerLeg'];
+                swapJoints.forEach(j => {
+                    if (targetPose[j]) {
+                        let tempX = targetPose[j].x || 0; let tempZ = targetPose[j].z || 0;
+                        targetPose[j].x = tempZ; targetPose[j].z = tempX;
+                    }
+                });
             }
 
-            applyCorrelations(targetPose);
-            clampPoses(targetPose);
-
-            targetPose.spine.x = clamp(targetPose.spine.x + postureOffset * 0.5, -0.4, 0.4);
-            targetPose.chest.x = clamp(targetPose.chest.x + postureOffset * 0.5, -0.4, 0.4);
-
-            if (!window.currentQuats) window.currentQuats = {};
-            if (typeof window.currentSitOffset === 'undefined') window.currentSitOffset = 0;
-            const lerpFactor = 1.0 - Math.exp(-10.0 * deltaTime); 
+            if (!window.currentOffsetQuats) window.currentOffsetQuats = {};
             
             Object.keys(targetPose).forEach(key => {
                 const b = humanoid.getNormalizedBoneNode(key);
-                if (b) { 
-                    if (!window.currentQuats[key]) window.currentQuats[key] = new THREE.Quaternion();
-                    const targetEuler = new THREE.Euler(targetPose[key].x, targetPose[key].y, targetPose[key].z, 'XYZ');
-                    const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
-                    window.currentQuats[key].slerp(targetQuat, lerpFactor);
-                    b.quaternion.copy(window.currentQuats[key]);
+                if (b && window.currentRestPose && window.currentRestPose[key]) { 
+                    if (!window.currentOffsetQuats[key]) window.currentOffsetQuats[key] = new THREE.Quaternion();
+                    
+                    const targetOffsetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(targetPose[key].x, targetPose[key].y, targetPose[key].z, 'XYZ'));
+                    window.currentOffsetQuats[key].slerp(targetOffsetQuat, lerpFactor);
+                    
+                    const finalQuat = window.currentRestPose[key].clone().multiply(window.currentOffsetQuats[key]);
+                    b.quaternion.copy(finalQuat);
                 }
             });
 
+            if (typeof window.currentSitOffset === 'undefined') window.currentSitOffset = 0;
             window.currentSitOffset += (sitDownOffset - window.currentSitOffset) * lerpFactor;
-            currentVrm.scene.position.copy(basePosition); 
-            currentVrm.scene.position.y -= window.currentSitOffset;
+            
+            currentVrm.scene.position.copy(basePosition); currentVrm.scene.position.y -= window.currentSitOffset;
             currentVrm.update(deltaTime);
         }
 
         function animate() {
             requestAnimationFrame(animate); updateAnimation(clock.getDelta(), clock.getElapsedTime());
-            if (currentVrm && isCameraFollowing) { 
-                const targetPos = new THREE.Vector3(currentVrm.scene.position.x, currentVrm.scene.position.y + 1.0, currentVrm.scene.position.z); 
-                controls.target.lerp(targetPos, 0.1); 
-            }
+            if (currentVrm && isCameraFollowing) { controls.target.lerp(new THREE.Vector3(currentVrm.scene.position.x, currentVrm.scene.position.y + 1.0, currentVrm.scene.position.z), 0.1); }
             controls.update(); renderer.render(scene, camera);
         }
         animate();
 
+        // --------------------------------------------------------
+        // 音声制御ロジック (Gemini TTS & Web Speech API)
+        // --------------------------------------------------------
+        const audioPlayer = document.getElementById('audioPlayer');
+        
+        // isSpeakingを正確に同期
+        audioPlayer.addEventListener('play', () => { isSpeaking = true; });
+        audioPlayer.addEventListener('ended', () => { isSpeaking = false; });
+        audioPlayer.addEventListener('error', () => { isSpeaking = false; });
+
+        function createWavBlob(base64Data, sampleRate) {
+            const binaryString = atob(base64Data);
+            const len = binaryString.length;
+            const pcmData = new Uint8Array(len);
+            for (let i = 0; i < len; i++) { pcmData[i] = binaryString.charCodeAt(i); }
+
+            const wavHeader = new ArrayBuffer(44);
+            const view = new DataView(wavHeader);
+            const numChannels = 1, bitsPerSample = 16;
+            const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+            const blockAlign = numChannels * (bitsPerSample / 8);
+
+            view.setUint32(0, 0x52494646, false); 
+            view.setUint32(4, 36 + len, true);    
+            view.setUint32(8, 0x57415645, false); 
+            view.setUint32(12, 0x666D7420, false); 
+            view.setUint32(16, 16, true);          
+            view.setUint16(20, 1, true);           
+            view.setUint16(22, numChannels, true); 
+            view.setUint32(24, sampleRate, true);  
+            view.setUint32(28, byteRate, true);    
+            view.setUint16(32, blockAlign, true);  
+            view.setUint16(34, bitsPerSample, true); 
+            view.setUint32(36, 0x64617461, false); 
+            view.setUint32(40, len, true);         
+
+            return new Blob([wavHeader, pcmData], { type: 'audio/wav' });
+        }
+
+        async function fetchGeminiTTS(modelName, apiKey, payload) {
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            return data;
+        }
+
+        async function generateGeminiVoice(text, emotionStr) {
+            const API_KEY = apiKeyInput.value.trim();
+            const voice = document.getElementById('tts-voice-select').value;
+            const customPrompt = document.getElementById('tts-custom-prompt').value.trim();
+
+            let tone = "人間らしく自然なトーンで";
+            if(emotionStr === 'joy') tone = "非常に明るく、元気いっぱいの高いテンションで";
+            else if(emotionStr === 'sorrow') tone = "ため息をつきながら、とても悲しそうなトーンでゆっくりと";
+            else if(emotionStr === 'angry') tone = "少しパニックになったように、早口で焦った様子で"; 
+
+            let instructions = [];
+            if(tone) instructions.push(tone);
+            if(customPrompt) instructions.push(customPrompt);
+            const finalInstruction = instructions.join('、かつ、');
+            const prompt = `以下のセリフを、【${finalInstruction}】読み上げてください:\n\n${text}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } }
+                }
+            };
+
+            const models = ['gemini-2.5-flash-preview-tts', 'gemini-3.1-flash-preview-tts'];
+            for(const model of models) {
+                try {
+                    const data = await fetchGeminiTTS(model, API_KEY, payload);
+                    const inlineData = data.candidates[0].content.parts[0].inlineData;
+                    const base64Audio = inlineData.data;
+                    let sampleRate = 24000;
+                    const mimeMatch = inlineData.mimeType.match(/rate=(\d+)/);
+                    if (mimeMatch) { sampleRate = parseInt(mimeMatch[1], 10); }
+                    const wavBlob = createWavBlob(base64Audio, sampleRate);
+                    return URL.createObjectURL(wavBlob);
+                } catch(e) {
+                    console.warn(`[${model}] TTS generating failed:`, e);
+                }
+            }
+            throw new Error("All TTS models failed");
+        }
+
+        function speakTextWithWebSpeech(text) {
+            window.speechSynthesis.cancel(); 
+            const utterThis = new SpeechSynthesisUtterance(text);
+            const selectedOption = document.getElementById('voice-select').selectedOptions[0]?.value;
+            if (selectedOption && voices[selectedOption]) utterThis.voice = voices[selectedOption];
+            utterThis.rate = 1.1; 
+            utterThis.onstart = () => { isSpeaking = true; };
+            utterThis.onend = () => { isSpeaking = false; };
+            utterThis.onerror = () => { isSpeaking = false; }; 
+            window.speechSynthesis.speak(utterThis);
+        }
+
+        // --------------------------------------------------------
+        // チャット & AIロジック (ステートマシン統合)
+        // --------------------------------------------------------
         const chatHistoryDiv = document.getElementById('chat-history'); const quickRepliesDiv = document.getElementById('quick-replies'); const chatInput = document.getElementById('chat-input'); const sendBtn = document.getElementById('send-btn'); const chatContainer = document.getElementById('chat-container');
         window.clearDisplay = () => { chatHistoryDiv.innerHTML = ''; }; window.toggleTransparency = () => { chatContainer.classList.toggle('transparent-mode'); };
         function renderHistory() { chatHistoryDiv.innerHTML = ''; chatHistory.slice(-6).forEach(msg => { const div = document.createElement('div'); div.className = `msg ${msg.role === 'user' ? 'user' : 'bot'}`; div.textContent = msg.content; chatHistoryDiv.appendChild(div); }); chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight; }
 
-        function speakText(text) {
-            if (!document.getElementById('tts-toggle').checked) {
-                isSpeaking = true; setTimeout(() => { isSpeaking = false; }, Math.max(1500, text.length * 150)); return; 
+        function triggerAvatarActionOnly(emotionLabel, gestureLabel, gestureDuration = 4.0) {
+            if (!currentVrm) return; 
+            const expressions = currentVrm.expressionManager;
+            if (expressions) {
+                expressions.setValue('happy', 0); expressions.setValue('angry', 0); expressions.setValue('sad', 0); expressions.setValue('neutral', 0);
+                if (emotionLabel === 'joy') expressions.setValue('happy', 1.0); else if (emotionLabel === 'angry') expressions.setValue('angry', 1.0); else if (emotionLabel === 'sorrow') expressions.setValue('sad', 1.0); else expressions.setValue('neutral', 1.0);
             }
-            window.speechSynthesis.cancel(); 
-            const utterThis = new SpeechSynthesisUtterance(text); const selectedOption = document.getElementById('voice-select').selectedOptions[0]?.value;
-            if (selectedOption && voices[selectedOption]) utterThis.voice = voices[selectedOption];
-            utterThis.rate = 1.1; utterThis.onstart = () => { isSpeaking = true; }; utterThis.onend = () => { isSpeaking = false; }; utterThis.onerror = () => { isSpeaking = false; }; window.speechSynthesis.speak(utterThis);
-        }
 
-        function triggerAvatarAction(emotionLabel, gestureLabel, speechText = "") {
-            if (!currentVrm) return; const expressions = currentVrm.expressionManager;
-            expressions.setValue('happy', 0); expressions.setValue('angry', 0); expressions.setValue('sad', 0); expressions.setValue('neutral', 0);
-            if (emotionLabel === 'joy') expressions.setValue('happy', 1.0); else if (emotionLabel === 'angry') expressions.setValue('angry', 1.0); else if (emotionLabel === 'sorrow') expressions.setValue('sad', 1.0); else expressions.setValue('neutral', 1.0);
-            
+            if(window.emotionResetTimer) clearTimeout(window.emotionResetTimer);
+            window.emotionResetTimer = setTimeout(() => {
+                if (currentVrm && currentVrm.expressionManager) {
+                    ['happy', 'angry', 'sad', 'aa', 'ih', 'ou', 'ee', 'oh'].forEach(v => currentVrm.expressionManager.setValue(v, 0));
+                    currentVrm.expressionManager.setValue('neutral', 1.0);
+                }
+            }, 5000);
+
             setTimeout(() => { 
-                if (baseState === 'sit_bench') { if (Math.random() < 0.4 && !aiTargetPosition) { baseState = 'listening'; } } 
-                else { baseState = 'listening'; }
-                currentAction = gestureLabel || null; gestureTimer = 4.0; idleTime = 0; if (speechText) speakText(speechText); 
+                const hasVrma = window.savedVrmaRecords && window.savedVrmaRecords.some(r => r.name === gestureLabel);
+                if(gestureLabel && (hasVrma || gestureLabel.startsWith('talk_') || gestureLabel.startsWith('jojo_') || ['nod','joy','surprised'].includes(gestureLabel))) { window.standUpFromChair(); }
+                if (hasVrma) { window.playSavedVrma(gestureLabel); } 
+                else if (gestureLabel) { window.resetPoseState(); currentAction = gestureLabel; gestureTimer = gestureDuration; }
+                idleTime = 0; 
             }, 500); 
         }
 
-        function triggerFallbackResponse(userText) {
-            const fallbackPatterns = [
-                { text: "さすがですね！", emotion: "joy", gesture: "joy", replies: ["照れるなぁ", "詳しく教えて！"] },
-                { text: "知らなかったです！", emotion: "surprised", gesture: "surprised", replies: ["詳しく教えて！", "面白いね"] },
-                { text: "そうなんですね！", emotion: "neutral", gesture: "nod", replies: ["聞いてくれてありがとう", "なるほど"] }
-            ];
-            const choice = fallbackPatterns[Math.floor(Math.random() * fallbackPatterns.length)];
-            triggerAvatarAction(choice.emotion, choice.gesture, choice.text); chatHistory.push({ role: 'bot', content: choice.text }); renderHistory();
-            choice.replies.forEach(text => { const btn = document.createElement('button'); btn.className = 'qr-btn'; btn.textContent = text; btn.onclick = () => callGeminiAPI(text); quickRepliesDiv.appendChild(btn); });
-        }
+        const fallbackPatterns = [
+            { text: "さすがですね！", emotion: "joy", gesture: "joy", replies: ["照れるなぁ", "詳しく教えて！"] },
+            { text: "知らなかったです！", emotion: "surprised", gesture: "surprised", replies: ["詳しく教えて！", "面白いね"] },
+            { text: "そうなんですね！", emotion: "neutral", gesture: "nod", replies: ["聞いてくれてありがとう", "なるほど"] }
+        ];
+
+        const reactionDict = [
+            { text: "うんうん", emotion: "neutral", gesture: "nod" },
+            { text: "そうだね", emotion: "neutral", gesture: "nod" },
+            { text: "なるほど", emotion: "neutral", gesture: "nod" },
+            { text: "うーん…", emotion: "neutral", gesture: "talk_think" },
+            { text: "えっと…", emotion: "neutral", gesture: "talk_think" },
+            { text: "そうですね…", emotion: "neutral", gesture: "talk_think" },
+            { text: "さすがですね！", emotion: "joy", gesture: "joy" },
+            { text: "知らなかった！", emotion: "surprised", gesture: "surprised" },
+            { text: "そうなんですね！", emotion: "joy", gesture: "joy" }
+        ];
+
+        const fallbackGags = [
+            "あれ、声のデータがうまく読み込めなかったみたい…今日はこの声で我慢してね！",
+            "むむ、電波の調子が悪いのかな？いつもと違う声だけど許して！",
+            "あ、変換に失敗しちゃった…素の声で話すね！"
+        ];
 
         async function callGeminiAPI(userText) {
-            chatHistory.push({ role: 'user', content: userText }); renderHistory(); chatInput.value = ''; quickRepliesDiv.innerHTML = ''; chatInput.blur(); 
+            chatHistory.push({ role: 'user', content: userText }); 
+            renderHistory(); 
+            chatInput.value = ''; 
+            quickRepliesDiv.innerHTML = ''; 
+            chatInput.blur(); 
             idleTime = 0; 
             
-            if (document.getElementById('tts-toggle').checked) { let silentUtter = new SpeechSynthesisUtterance(''); silentUtter.volume = 0; window.speechSynthesis.speak(silentUtter); }
+            // モバイルブラウザでの音声自動再生ブロック回避
+            let silentUtter = new SpeechSynthesisUtterance(''); silentUtter.volume = 0; window.speechSynthesis.speak(silentUtter);
 
             const apiKey = apiKeyInput.value.trim();
-            if (!apiKey || !characterSettings) { setTimeout(() => triggerFallbackResponse(userText), 500); return; }
+            if (!apiKey || !characterSettings) { 
+                const choice = fallbackPatterns[Math.floor(Math.random() * fallbackPatterns.length)];
+                triggerAvatarActionOnly(choice.emotion, choice.gesture); 
+                speakTextWithWebSpeech(choice.text);
+                chatHistory.push({ role: 'bot', content: choice.text }); renderHistory();
+                return; 
+            }
 
-            const systemPrompt = `あなたは以下の設定を持つ3DヒューマノイドAIです。必ず指定されたJSON形式のみで返答してください。ユーザーから「座って」「ベンチに行こう」等と明確に着席を指示された場合のみ、gestureに"sit_bench"を指定してください（それ以外は絶対に使用しないでください）。\n【キャラ設定】\n${JSON.stringify(characterSettings)}\n【出力JSONスキーマ】\n{ "speech_text": "発話テキスト", "quick_replies": ["候補1", "候補2"], "emotion": "joy, angry, sorrow, neutralのいずれか", "gesture": "nod, shake_head, joy, angry, sorrow, surprised, thinking, shy, sit_bench, null のいずれか" }`;
+            // --- [Step 1] 即時リアクション選択・表示 (無音) ---
+            const reaction = reactionDict[Math.floor(Math.random() * reactionDict.length)];
+            triggerAvatarActionOnly(reaction.emotion, reaction.gesture, 9999); // 次の処理が完了するまで長めに維持
             
+            const botMsgDiv = document.createElement('div');
+            botMsgDiv.className = 'msg bot';
+            botMsgDiv.innerHTML = `${reaction.text} <span class="blinking-dots">...</span>`;
+            chatHistoryDiv.appendChild(botMsgDiv);
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+
+            // --- [Step 2] Gemini Flash-Liteリクエスト ---
+            const systemPrompt = `あなたは以下の設定を持つ3DヒューマノイドAIです。必ず指定されたJSON形式のみで返答してください。
+【キャラ設定】
+${JSON.stringify(characterSettings)}
+【ユーザー記憶】
+${JSON.stringify(relationMemory)}
+【出力JSONスキーマ】
+{
+  "speech_text": "発話テキスト",
+  "quick_replies": ["候補1", "候補2"],
+  "emotion": "joy, angry, sorrow, neutralのいずれか",
+  "gesture": "ユーザーが登録したモーション名、または sit_bench 等を指定",
+  "memory_update": {"ユーザーの趣味": "読書"}
+}`;
+            
+            let result;
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -674,21 +929,136 @@
                 });
                 if (!response.ok) throw new Error('通信エラー');
                 const data = await response.json(); recordApiUsage(data.usageMetadata?.totalTokenCount || 0);
-                const result = JSON.parse(data.candidates[0].content.parts[0].text);
-                
-                if (result.gesture === 'sit_bench') { aiTargetPosition = new THREE.Vector3(1.0, 0, -1.1); aiActionAfterArrival = 'sit'; result.gesture = null; }
-                triggerAvatarAction(result.emotion, result.gesture, result.speech_text);
-                chatHistory.push({ role: 'bot', content: result.speech_text }); localStorage.setItem('vrm_chatHistory', JSON.stringify(chatHistory)); renderHistory();
-                if (result.quick_replies) { result.quick_replies.forEach(text => { const btn = document.createElement('button'); btn.className = 'qr-btn'; btn.textContent = text; btn.onclick = () => callGeminiAPI(text); quickRepliesDiv.appendChild(btn); }); }
-            } catch (error) { triggerFallbackResponse(userText); }
+                result = JSON.parse(data.candidates[0].content.parts[0].text);
+            } catch (error) { 
+                const choice = fallbackPatterns[Math.floor(Math.random() * fallbackPatterns.length)];
+                botMsgDiv.innerHTML = choice.text;
+                triggerAvatarActionOnly(choice.emotion, choice.gesture); 
+                speakTextWithWebSpeech(choice.text);
+                chatHistory.push({ role: 'bot', content: choice.text });
+                return;
+            }
+
+            if (result.memory_update && Object.keys(result.memory_update).length > 0) {
+                relationMemory = { ...relationMemory, ...result.memory_update };
+                localStorage.setItem('vrm_relationMemory', JSON.stringify(relationMemory));
+            }
+
+            // --- [Step 3] Gemini TTS リクエスト ---
+            let finalSpeechText = result.speech_text;
+            let finalGesture = result.gesture;
+            let duration = 4.0;
+            if(finalGesture && finalGesture.startsWith('jojo_')) { duration = 5.0; } 
+            else if (!finalGesture && result.speech_text) {
+                const talkGestures = ['talk_explain', 'talk_passion', 'talk_think'];
+                if (Math.random() < 0.6) finalGesture = talkGestures[Math.floor(Math.random() * talkGestures.length)];
+            }
+            if (finalGesture === 'sit_bench') { aiTargetPosition = new THREE.Vector3(1.0, 0, -0.7); aiActionAfterArrival = 'turning_for_sit'; finalGesture = null; }
+
+            let audioUrl = null;
+            if (document.getElementById('use-gemini-tts').checked) {
+                try {
+                    audioUrl = await generateGeminiVoice(finalSpeechText, result.emotion);
+                } catch (err) {
+                    // TTS失敗時のギャグフォールバック
+                    if (!window.hasApologizedForFallback) {
+                        const gag = fallbackGags[Math.floor(Math.random() * fallbackGags.length)];
+                        finalSpeechText = gag + " " + finalSpeechText;
+                        window.hasApologizedForFallback = true;
+                    }
+                }
+            }
+
+            // --- [Step 4] UI更新・再生開始 ---
+            botMsgDiv.innerHTML = finalSpeechText;
+            chatHistory.push({ role: 'bot', content: finalSpeechText }); 
+            localStorage.setItem('vrm_chatHistory', JSON.stringify(chatHistory));
+            
+            triggerAvatarActionOnly(result.emotion, finalGesture, duration);
+
+            if (audioUrl) {
+                audioPlayer.src = audioUrl;
+                try {
+                    await audioPlayer.play();
+                } catch(e) {
+                    // 再生ブロックされた場合はWebSpeechにフォールバック
+                    speakTextWithWebSpeech(finalSpeechText);
+                }
+            } else {
+                speakTextWithWebSpeech(finalSpeechText);
+            }
+
+            // --- [Step 5] 完了・Quick Replies表示 ---
+            if (result.quick_replies) { 
+                result.quick_replies.forEach(text => { 
+                    const btn = document.createElement('button'); 
+                    btn.className = 'qr-btn'; 
+                    btn.textContent = text; 
+                    btn.onclick = () => callGeminiAPI(text); 
+                    quickRepliesDiv.appendChild(btn); 
+                }); 
+            }
         }
 
-        sendBtn.addEventListener('click', () => { const text = chatInput.value.trim(); if (text) callGeminiAPI(text); }); chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
-        window.exportMemory = () => { const blob = new Blob([JSON.stringify(relationMemory, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'vrm_memory.json'; a.click(); };
-        window.exportChatLog = () => { const logText = chatHistory.map(m => `${m.role === 'user' ? 'あなた' : 'AI'}: ${m.content}`).join('\n\n'); const blob = new Blob([logText], { type: 'text/plain' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'chat_log.txt'; a.click(); };
-        window.clearMemory = () => { if(confirm('初期化しますか？')) { localStorage.removeItem('vrm_chatHistory'); localStorage.removeItem('vrm_relationMemory'); chatHistory = []; relationMemory = {}; renderHistory(); quickRepliesDiv.innerHTML = ''; } };
-        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+        sendBtn.addEventListener('click', () => { 
+            const text = chatInput.value.trim(); 
+            if (text) {
+                audioPlayer.play().catch(()=>{}); audioPlayer.pause(); // モバイルでの制限解除トリガー
+                callGeminiAPI(text); 
+            }
+        }); 
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
+        
         renderHistory();
+
+        // --------------------------------------------------------
+        // データ管理・JSON適用
+        // --------------------------------------------------------
+        
+        window.exportMemory = () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(relationMemory, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "vrm_memory.json");
+            document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove();
+        };
+
+        window.exportChatLog = () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(chatHistory, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "vrm_chatlog.json");
+            document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove();
+        };
+
+        document.getElementById('memory-file').addEventListener('change', (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    relationMemory = JSON.parse(event.target.result); localStorage.setItem('vrm_relationMemory', JSON.stringify(relationMemory));
+                    alert('記憶データを正常に復元しました。');
+                } catch(err) { alert('ファイルの読み込みに失敗しました。正しいJSONファイルか確認してください。'); }
+            };
+            reader.readAsText(file);
+        });
+
+        window.clearMemory = () => {
+            if (confirm('すべての記憶、会話ログ、設定をリセットしますか？\n（※IndexedDBに保存されたVRMとモーションは消えません）')) {
+                localStorage.removeItem('vrm_chatHistory'); localStorage.removeItem('vrm_relationMemory'); localStorage.removeItem('vrm_characterSettings');
+                location.reload();
+            }
+        };
+
+        window.applyJsonText = () => {
+            const text = document.getElementById('json-text').value;
+            try {
+                characterSettings = JSON.parse(text); localStorage.setItem('vrm_characterSettings', JSON.stringify(characterSettings));
+                alert('キャラクター設定を正常に適用しました。');
+            } catch (e) { alert('JSONの形式が正しくありません。\nカンマの抜け漏れや全角文字が含まれていないか確認してください。'); }
+        };
+        
+        if (characterSettings) { document.getElementById('json-text').value = JSON.stringify(characterSettings, null, 2); }
     </script>
 </body>
 </html>
