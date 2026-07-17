@@ -29,6 +29,9 @@
         .jojo-btn { display: block; width: 100%; margin: 4px 0; padding: 8px; background: rgba(255, 193, 7, 0.2); color: #FFD54F; border: 1px solid #FFC107; border-radius: 4px; cursor: pointer; font-weight:bold; font-size: 12px; text-align: left; }
         .jojo-btn:active { background: #FFC107; color: black; }
 
+        #vrma-toggle { position: absolute; top: 180px; right: 15px; z-index: 20; background: #FF5722; color: white; border: none; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
+        #vrma-panel { position: absolute; top: 235px; right: 15px; width: 320px; max-width: 90vw; background: rgba(30, 10, 10, 0.9); color: white; padding: 15px; border-radius: 10px; border: 2px solid #FF5722; box-sizing: border-box; z-index: 20; display: none; backdrop-filter: blur(5px); max-height: 50vh; overflow-y: auto; }
+
         #chat-container { position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(to top, rgba(255,255,255,0.95) 40%, rgba(255,255,255,0)); padding: 10px 10px 15px 10px; box-sizing: border-box; z-index: 10; display: flex; flex-direction: column; gap: 8px; pointer-events: none; transition: background 0.3s ease; }
         #chat-container.transparent-mode { background: transparent; }
         #chat-container.transparent-mode .msg.bot { background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); color: #111; }
@@ -76,25 +79,16 @@
     <button id="settings-toggle" onclick="toggleSettings()">⚙️</button>
     <button id="debug-toggle" onclick="toggleDebugPanel()">🛠️</button>
     <button id="jojo-toggle" onclick="toggleJojoPanel()">🌟</button>
+    <button id="vrma-toggle" onclick="toggleVrmaPanel()">🎬</button>
 
     <div id="settings-panel">
-        <div style="text-align: center; color: #4CAF50; font-family: monospace; font-size: 12px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #555;">Ver 20.0 - TTS Integrated Engine</div>
+        <div style="text-align: center; color: #4CAF50; font-family: monospace; font-size: 12px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #555;">Ver 23.0 - Auto Gesture Sequence</div>
         
         <h3>🔑 API キー</h3>
         <div class="control-group"><input type="password" id="api-key" placeholder="AI Studioで取得したキー"></div>
         
         <h3>📂 アバター (VRM)</h3>
         <div class="control-group"><input type="file" id="vrm-file" accept=".vrm" /><div id="vrm-shortcut-container"></div></div>
-        
-        <h3>🎬 モーション管理 (.vrma)</h3>
-        <div class="control-group">
-            <input type="file" id="vrma-file" accept=".vrma" />
-            <div style="display:flex; gap:5px; margin-top:5px;">
-                <input type="text" id="vrma-name" placeholder="呼出名 (例: joy, nod)" style="flex:1;">
-                <button class="action-btn" style="background:#8BC34A; margin-top:0; width:auto; padding:8px;" onclick="saveVrmaMotion()">保存</button>
-            </div>
-            <div id="vrma-shortcut-container" style="margin-top: 10px;"></div>
-        </div>
 
         <h3>🗣️ 発声・動作設定</h3>
         <div class="control-group" style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
@@ -162,6 +156,20 @@
         <button class="jojo-btn" onclick="playJojo(null)" style="background:#f44336; color:white; border:none; text-align:center; margin-top:10px;">⏹️ ポーズ解除</button>
     </div>
 
+    <div id="vrma-panel">
+        <h3 style="color: #FF5722; font-size: 15px; margin-top: 0; display:flex; justify-content: space-between;"><span>🎬 モーション一括管理</span><span style="font-size: 12px; cursor:pointer;" onclick="toggleVrmaPanel()">❌</span></h3>
+        <div class="control-group" style="font-size: 11px; margin-bottom: 10px; color: #ccc;">
+            ※複数ファイルをまとめて選択できます。<br>
+            ※ファイル名（拡張子なし）がそのままAIの「呼出名」になります。<br>
+            例：「手を振る.vrma」「お辞儀.vrma」
+        </div>
+        <div class="control-group">
+            <input type="file" id="vrma-file" accept=".vrma" multiple />
+            <button class="action-btn" style="background:#8BC34A; margin-top:5px;" onclick="saveMultipleVrma()">一括登録</button>
+        </div>
+        <div id="vrma-shortcut-container" style="margin-top: 10px;"></div>
+    </div>
+
     <div id="chat-container">
         <div id="ui-tools">
             <button class="tool-btn" onclick="toggleApiStatus()" id="status-toggle-btn">📊 ステータス</button>
@@ -173,7 +181,6 @@
         <div id="input-area"><input type="text" id="chat-input" placeholder="メッセージを入力..." autocomplete="off"><button id="send-btn">➤</button></div>
     </div>
 
-    <!-- 音声再生用の隠しタグ -->
     <audio id="audioPlayer"></audio>
 
     <script type="importmap">
@@ -192,12 +199,12 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { VRMLoaderPlugin, VRMHumanBoneName } from '@pixiv/three-vrm';
-        import { VRMAnimationLoaderPlugin } from '@pixiv/three-vrm-animation';
+        import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 
         // --------------------------------------------------------
         // エラーハンドラ & グローバル変数
         // --------------------------------------------------------
-        window.hasApologizedForFallback = false; // TTS完全失敗時のギャグ演出用フラグ
+        window.hasApologizedForFallback = false; 
 
         window.addEventListener('error', (e) => {
             const errorText = document.getElementById('loading-error-text');
@@ -224,10 +231,16 @@
         window.toggleApiStatus = () => { const o = document.getElementById('api-status-overlay'); const b = document.getElementById('status-toggle-btn'); if (o.style.display === 'none' || o.style.display === '') { o.style.display = 'block'; b.style.background = '#4CAF50'; } else { o.style.display = 'none'; b.style.background = 'rgba(0,0,0,0.5)'; } };
         window.toggleActionPad = () => { const p = document.getElementById('action-pad'); p.style.display = (p.style.display === 'none' || p.style.display === '') ? 'grid' : 'none'; };
         
-        const closeAllPanels = () => { document.getElementById('settings-panel').style.display = 'none'; document.getElementById('debug-panel').style.display = 'none'; document.getElementById('jojo-panel').style.display = 'none'; };
+        const closeAllPanels = () => { 
+            document.getElementById('settings-panel').style.display = 'none'; 
+            document.getElementById('debug-panel').style.display = 'none'; 
+            document.getElementById('jojo-panel').style.display = 'none'; 
+            document.getElementById('vrma-panel').style.display = 'none'; 
+        };
         window.toggleSettings = () => { const p = document.getElementById('settings-panel'); const isOpen = p.style.display === 'block'; closeAllPanels(); if(!isOpen) p.style.display = 'block'; };
         window.toggleDebugPanel = () => { const p = document.getElementById('debug-panel'); const isOpen = p.style.display === 'block'; closeAllPanels(); if(!isOpen) p.style.display = 'block'; };
         window.toggleJojoPanel = () => { const p = document.getElementById('jojo-panel'); const isOpen = p.style.display === 'block'; closeAllPanels(); if(!isOpen) p.style.display = 'block'; };
+        window.toggleVrmaPanel = () => { const p = document.getElementById('vrma-panel'); const isOpen = p.style.display === 'block'; closeAllPanels(); if(!isOpen) p.style.display = 'block'; };
 
         function recordApiUsage(tokenCount) { apiUsageLog.push({ time: Date.now(), tokens: tokenCount }); apiUsageLog = apiUsageLog.filter(log => log.time > Date.now() - 86400000); localStorage.setItem('vrm_apiUsageLog', JSON.stringify(apiUsageLog)); }
         setInterval(() => { const l = apiUsageLog.filter(log => log.time > Date.now() - 60000); document.getElementById('stat-rpm').textContent = l.length; document.getElementById('stat-tpm').textContent = l.reduce((sum, log) => sum + (log.tokens || 0), 0).toLocaleString(); }, 1000);
@@ -338,23 +351,29 @@
         updateVRMShortcutUI();
 
         window.savedVrmaRecords = [];
-        window.saveVrmaMotion = async () => {
+        window.saveMultipleVrma = async () => {
             const fileInput = document.getElementById('vrma-file');
-            const nameInput = document.getElementById('vrma-name');
-            const file = fileInput.files[0];
-            const name = nameInput.value.trim();
+            const files = fileInput.files;
 
-            if (!file || !name) { alert('ファイルと呼出名を入力してください。'); return; }
+            if (!files || files.length === 0) { alert('ファイルを選択してください。'); return; }
 
             const db = await openDB();
             const tx = db.transaction(MOTION_STORE, 'readwrite');
             const store = tx.objectStore(MOTION_STORE);
             
-            const record = { name: name, file: file, time: Date.now() };
-            store.put(record, name).onsuccess = () => {
+            let count = 0;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const name = file.name.replace(/\.[^/.]+$/, ""); 
+                const record = { name: name, file: file, time: Date.now() };
+                store.put(record, name);
+                count++;
+            }
+            
+            tx.oncomplete = () => {
                 window.updateVrmaUI();
-                fileInput.value = ''; nameInput.value = '';
-                alert(`モーション「${name}」を保存しました！\nGeminiが gesture に "${name}" を指定すると再生されます。`);
+                fileInput.value = '';
+                alert(`${count}件のモーションを登録しました！\nAIが会話の文脈に合わせて自動でこれらを呼び出します。`);
             };
         };
 
@@ -417,6 +436,7 @@
         let currentMixer = null; 
         let currentAnimationAction = null; 
         let isVrmaPlaying = false; 
+        let isVrmaLoading = false; 
         
         let baseState = 'listening'; let currentAction = null; let gestureTimer = 0; let idleTime = 0; let walkBlend = 0; let isSpeaking = false; let lipSyncTimer = 0; let aiTargetPosition = null; let aiActionAfterArrival = null;
         const clock = new THREE.Clock(); 
@@ -428,8 +448,16 @@
         let basePosition = new THREE.Vector3(0, 0, 0); let moveInput = { x: 0, y: 0, z: 0 };
 
         window.resetPoseState = function() {
-            window.currentOffsetQuats = {};
-            if (currentVrm) currentVrm.humanoid.resetPose();
+            if (!currentVrm || !window.currentRestPose) return;
+            if (!window.currentOffsetQuats) window.currentOffsetQuats = {};
+            
+            for (const boneName of Object.values(VRMHumanBoneName)) {
+                const node = currentVrm.humanoid.getNormalizedBoneNode(boneName);
+                if (node && window.currentRestPose[boneName]) {
+                    const invRest = window.currentRestPose[boneName].clone().invert();
+                    window.currentOffsetQuats[boneName] = invRest.multiply(node.quaternion);
+                }
+            }
         };
 
         window.standUpFromChair = function() {
@@ -456,44 +484,75 @@
             if(poseName) { window.standUpFromChair(); window.resetPoseState(); currentAction = poseName; gestureTimer = 99999; } 
             else { window.cancelTest(); } 
         };
-        window.cancelTest = () => { window.testMode = null; currentAction = null; gestureTimer = 0; isSpeaking = false; isVrmaPlaying = false; if(currentAnimationAction) currentAnimationAction.stop(); window.resetPoseState(); };
+        window.cancelTest = () => { window.testMode = null; currentAction = null; gestureTimer = 0; isSpeaking = false; isVrmaPlaying = false; isVrmaLoading = false; if(window.gestureSequenceTimer) clearInterval(window.gestureSequenceTimer); if(currentAnimationAction) currentAnimationAction.stop(); window.resetPoseState(); };
 
         window.playSavedVrma = async (name) => {
             const record = window.savedVrmaRecords.find(r => r.name === name);
             if (!record || !record.file || !currentVrm || !currentMixer) return;
             
             window.standUpFromChair();
-            window.cancelTest(); 
+            window.resetPoseState();
+            
+            isVrmaLoading = true;
+            isVrmaPlaying = false;
+            currentAction = null;
+            gestureTimer = 0;
             
             const url = URL.createObjectURL(record.file);
+            
             loader.load(url, (gltf) => {
-                const vrmAnimations = gltf.userData.vrmAnimations;
-                if (!vrmAnimations || vrmAnimations.length === 0) {
-                    URL.revokeObjectURL(url); return;
+                let clip = null;
+                
+                if (gltf.userData.vrmAnimations && gltf.userData.vrmAnimations.length > 0) {
+                    clip = createVRMAnimationClip(gltf.userData.vrmAnimations[0], currentVrm);
+                } 
+                else if (gltf.animations && gltf.animations.length > 0) {
+                    clip = gltf.animations[0];
                 }
+
+                if (!clip || !clip.tracks || clip.tracks.length === 0) {
+                    URL.revokeObjectURL(url); 
+                    isVrmaLoading = false;
+                    return;
+                }
+
+                window.previousBoneQuats = {};
+                for (const boneName of Object.values(VRMHumanBoneName)) {
+                    const node = currentVrm.humanoid.getNormalizedBoneNode(boneName);
+                    if (node) window.previousBoneQuats[boneName] = node.quaternion.clone();
+                }
+                window.vrmaBlendTime = 0.3;
+                window.vrmaBlendMax = 0.3;
                 
                 currentVrm.humanoid.resetPose();
                 currentVrm.scene.updateMatrixWorld(true);
 
-                const clip = vrmAnimations[0].createAnimationClip(currentVrm);
-                
-                if (currentAnimationAction) { currentAnimationAction.fadeOut(0.3); }
+                if (currentAnimationAction) { currentAnimationAction.stop(); }
                 
                 currentAnimationAction = currentMixer.clipAction(clip);
                 currentAnimationAction.setLoop(THREE.LoopOnce);
                 currentAnimationAction.clampWhenFinished = true;
+                currentAnimationAction.setEffectiveWeight(1.0);
                 
-                currentMixer.addEventListener('finished', function restoreProcedural(e) {
-                    if (e.action === currentAnimationAction) {
-                        isVrmaPlaying = false;
-                        window.resetPoseState();
-                        currentMixer.removeEventListener('finished', restoreProcedural);
-                    }
-                });
+                const animDuration = clip.duration || 0;
+                const keepTime = Math.max(animDuration * 1000 + 500, 3000); 
+
+                if(window.vrmaRestoreTimer) clearTimeout(window.vrmaRestoreTimer);
+
+                window.vrmaRestoreTimer = setTimeout(() => {
+                    isVrmaPlaying = false;
+                    isVrmaLoading = false;
+                    window.resetPoseState();
+                }, keepTime);
                 
+                isVrmaLoading = false;
                 isVrmaPlaying = true;
-                currentAnimationAction.reset().fadeIn(0.3).play();
+                
+                currentAnimationAction.reset().play();
+                
                 setTimeout(() => URL.revokeObjectURL(url), 10000); 
+            }, undefined, (err) => {
+                isVrmaLoading = false;
             });
         };
 
@@ -522,6 +581,7 @@
                         currentMixer = new THREE.AnimationMixer(currentVrm.scene);
                         currentAnimationAction = null;
                         isVrmaPlaying = false;
+                        isVrmaLoading = false;
                         
                         basePosition.set(0, 0, 0); idleTime = 0; aiTargetPosition = null; aiActionAfterArrival = null; 
                         baseState = 'listening'; currentAction = null; gestureTimer = 0; isCameraFollowing = true; 
@@ -572,9 +632,22 @@
             const humanoid = currentVrm.humanoid;
             const expressions = currentVrm.expressionManager;
             
-            if (isVrmaPlaying) { 
-                currentMixer.update(deltaTime); 
-                currentVrm.update(deltaTime);
+            if (isVrmaPlaying || isVrmaLoading) { 
+                if (isVrmaPlaying && currentMixer) {
+                    currentMixer.update(deltaTime); 
+                    currentVrm.update(deltaTime);
+                    
+                    if (window.vrmaBlendTime > 0) {
+                        window.vrmaBlendTime -= deltaTime;
+                        let weight = Math.max(0, window.vrmaBlendTime / window.vrmaBlendMax);
+                        for (const boneName of Object.values(VRMHumanBoneName)) {
+                            const node = currentVrm.humanoid.getNormalizedBoneNode(boneName);
+                            if (node && window.previousBoneQuats[boneName]) {
+                                node.quaternion.slerp(window.previousBoneQuats[boneName], weight);
+                            }
+                        }
+                    }
+                }
                 return; 
             }
 
@@ -720,10 +793,10 @@
         // --------------------------------------------------------
         const audioPlayer = document.getElementById('audioPlayer');
         
-        // isSpeakingを正確に同期
         audioPlayer.addEventListener('play', () => { isSpeaking = true; });
-        audioPlayer.addEventListener('ended', () => { isSpeaking = false; });
-        audioPlayer.addEventListener('error', () => { isSpeaking = false; });
+        // ★改修4: 音声終了時にシーケンスタイマーも止める
+        audioPlayer.addEventListener('ended', () => { isSpeaking = false; if(window.gestureSequenceTimer) clearInterval(window.gestureSequenceTimer); });
+        audioPlayer.addEventListener('error', () => { isSpeaking = false; if(window.gestureSequenceTimer) clearInterval(window.gestureSequenceTimer); });
 
         function createWavBlob(base64Data, sampleRate) {
             const binaryString = atob(base64Data);
@@ -815,8 +888,8 @@
             if (selectedOption && voices[selectedOption]) utterThis.voice = voices[selectedOption];
             utterThis.rate = 1.1; 
             utterThis.onstart = () => { isSpeaking = true; };
-            utterThis.onend = () => { isSpeaking = false; };
-            utterThis.onerror = () => { isSpeaking = false; }; 
+            utterThis.onend = () => { isSpeaking = false; if(window.gestureSequenceTimer) clearInterval(window.gestureSequenceTimer); };
+            utterThis.onerror = () => { isSpeaking = false; if(window.gestureSequenceTimer) clearInterval(window.gestureSequenceTimer); }; 
             window.speechSynthesis.speak(utterThis);
         }
 
@@ -827,7 +900,8 @@
         window.clearDisplay = () => { chatHistoryDiv.innerHTML = ''; }; window.toggleTransparency = () => { chatContainer.classList.toggle('transparent-mode'); };
         function renderHistory() { chatHistoryDiv.innerHTML = ''; chatHistory.slice(-6).forEach(msg => { const div = document.createElement('div'); div.className = `msg ${msg.role === 'user' ? 'user' : 'bot'}`; div.textContent = msg.content; chatHistoryDiv.appendChild(div); }); chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight; }
 
-        function triggerAvatarActionOnly(emotionLabel, gestureLabel, gestureDuration = 4.0) {
+        // ★改修5: 配列を受け取って、4.5秒ごとに次のモーションを自動再生するキューシステム
+        function triggerAvatarActionSequence(emotionLabel, gesturesArr) {
             if (!currentVrm) return; 
             const expressions = currentVrm.expressionManager;
             if (expressions) {
@@ -843,12 +917,40 @@
                 }
             }, 5000);
 
-            setTimeout(() => { 
+            if (window.gestureSequenceTimer) clearInterval(window.gestureSequenceTimer);
+            if (!gesturesArr || gesturesArr.length === 0) return;
+
+            let index = 0;
+            const playNext = () => {
+                if (index >= gesturesArr.length) {
+                    clearInterval(window.gestureSequenceTimer);
+                    return;
+                }
+                
+                let gestureLabel = gesturesArr[index];
+                if (gestureLabel === 'sit_bench') { index++; return; } // 座る処理は移動ロジックで行うためスキップ
+                
                 const hasVrma = window.savedVrmaRecords && window.savedVrmaRecords.some(r => r.name === gestureLabel);
-                if(gestureLabel && (hasVrma || gestureLabel.startsWith('talk_') || gestureLabel.startsWith('jojo_') || ['nod','joy','surprised'].includes(gestureLabel))) { window.standUpFromChair(); }
-                if (hasVrma) { window.playSavedVrma(gestureLabel); } 
-                else if (gestureLabel) { window.resetPoseState(); currentAction = gestureLabel; gestureTimer = gestureDuration; }
-                idleTime = 0; 
+                if(gestureLabel && (hasVrma || gestureLabel.startsWith('talk_') || gestureLabel.startsWith('jojo_') || ['nod','joy','surprised'].includes(gestureLabel))) { 
+                    window.standUpFromChair(); 
+                }
+                
+                if (hasVrma) { 
+                    window.playSavedVrma(gestureLabel); 
+                } else if (gestureLabel && gestureLabel !== 'null') { 
+                    window.resetPoseState(); 
+                    currentAction = gestureLabel; 
+                    gestureTimer = 4.0; 
+                }
+                idleTime = 0;
+                index++;
+            };
+
+            setTimeout(() => { 
+                playNext(); // 最初の一つを即時実行
+                if (gesturesArr.length > 1) {
+                    window.gestureSequenceTimer = setInterval(playNext, 4500); // 残りは4.5秒間隔で実行
+                }
             }, 500); 
         }
 
@@ -884,21 +986,19 @@
             chatInput.blur(); 
             idleTime = 0; 
             
-            // モバイルブラウザでの音声自動再生ブロック回避
             let silentUtter = new SpeechSynthesisUtterance(''); silentUtter.volume = 0; window.speechSynthesis.speak(silentUtter);
 
             const apiKey = apiKeyInput.value.trim();
             if (!apiKey || !characterSettings) { 
                 const choice = fallbackPatterns[Math.floor(Math.random() * fallbackPatterns.length)];
-                triggerAvatarActionOnly(choice.emotion, choice.gesture); 
+                triggerAvatarActionSequence(choice.emotion, [choice.gesture]); 
                 speakTextWithWebSpeech(choice.text);
                 chatHistory.push({ role: 'bot', content: choice.text }); renderHistory();
                 return; 
             }
 
-            // --- [Step 1] 即時リアクション選択・表示 (無音) ---
             const reaction = reactionDict[Math.floor(Math.random() * reactionDict.length)];
-            triggerAvatarActionOnly(reaction.emotion, reaction.gesture, 9999); // 次の処理が完了するまで長めに維持
+            triggerAvatarActionSequence(reaction.emotion, [reaction.gesture]);
             
             const botMsgDiv = document.createElement('div');
             botMsgDiv.className = 'msg bot';
@@ -906,20 +1006,29 @@
             chatHistoryDiv.appendChild(botMsgDiv);
             chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
 
-            // --- [Step 2] Gemini Flash-Liteリクエスト ---
+            const vrmaListText = (window.savedVrmaRecords && window.savedVrmaRecords.length > 0)
+                ? window.savedVrmaRecords.map(r => r.name).join(', ')
+                : "登録なし";
+
+            // ★改修6: AIに「複数のモーションを配列で選んでね」と指示する
             const systemPrompt = `あなたは以下の設定を持つ3DヒューマノイドAIです。必ず指定されたJSON形式のみで返答してください。
 【キャラ設定】
 ${JSON.stringify(characterSettings)}
 【ユーザー記憶】
 ${JSON.stringify(relationMemory)}
+【利用可能な専用モーション】
+${vrmaListText}
+
 【出力JSONスキーマ】
 {
   "speech_text": "発話テキスト",
   "quick_replies": ["候補1", "候補2"],
   "emotion": "joy, angry, sorrow, neutralのいずれか",
-  "gesture": "ユーザーが登録したモーション名、または sit_bench 等を指定",
+  "gestures": ["モーション名1", "モーション名2"],
   "memory_update": {"ユーザーの趣味": "読書"}
-}`;
+}
+【重要: gesturesの指定ルール】
+上記の『利用可能な専用モーション』リストから、会話の文脈に合うものを配列で指定してください。セリフが長い場合は、話の展開に合わせて2〜3個指定してください（順番に再生されます）。合致するものがなければ "sit_bench" や "talk_explain"、"talk_passion" などの基本ポーズを指定してください。`;
             
             let result;
             try {
@@ -933,7 +1042,7 @@ ${JSON.stringify(relationMemory)}
             } catch (error) { 
                 const choice = fallbackPatterns[Math.floor(Math.random() * fallbackPatterns.length)];
                 botMsgDiv.innerHTML = choice.text;
-                triggerAvatarActionOnly(choice.emotion, choice.gesture); 
+                triggerAvatarActionSequence(choice.emotion, [choice.gesture]); 
                 speakTextWithWebSpeech(choice.text);
                 chatHistory.push({ role: 'bot', content: choice.text });
                 return;
@@ -944,23 +1053,32 @@ ${JSON.stringify(relationMemory)}
                 localStorage.setItem('vrm_relationMemory', JSON.stringify(relationMemory));
             }
 
-            // --- [Step 3] Gemini TTS リクエスト ---
-            let finalSpeechText = result.speech_text;
-            let finalGesture = result.gesture;
-            let duration = 4.0;
-            if(finalGesture && finalGesture.startsWith('jojo_')) { duration = 5.0; } 
-            else if (!finalGesture && result.speech_text) {
-                const talkGestures = ['talk_explain', 'talk_passion', 'talk_think'];
-                if (Math.random() < 0.6) finalGesture = talkGestures[Math.floor(Math.random() * talkGestures.length)];
+            let finalSpeechText = result.speech_text || "";
+            let gesturesArr = result.gestures || [];
+            
+            // 下位互換用（AIが古いJSON形式で返してきた場合）
+            if (result.gesture && gesturesArr.length === 0) {
+                gesturesArr = [result.gesture];
             }
-            if (finalGesture === 'sit_bench') { aiTargetPosition = new THREE.Vector3(1.0, 0, -0.7); aiActionAfterArrival = 'turning_for_sit'; finalGesture = null; }
+
+            // ★改修7: 文字数から再生時間を予測し、喋っている間はジェスチャーを自動補充する
+            const neededGestures = Math.max(1, Math.ceil(finalSpeechText.length / 30));
+            const talkGestures = ['talk_explain', 'talk_passion', 'talk_think'];
+            
+            while (gesturesArr.length < neededGestures) {
+                gesturesArr.push(talkGestures[Math.floor(Math.random() * talkGestures.length)]);
+            }
+
+            if (gesturesArr.includes('sit_bench') || result.gesture === 'sit_bench') { 
+                aiTargetPosition = new THREE.Vector3(1.0, 0, -0.7); 
+                aiActionAfterArrival = 'turning_for_sit'; 
+            }
 
             let audioUrl = null;
             if (document.getElementById('use-gemini-tts').checked) {
                 try {
                     audioUrl = await generateGeminiVoice(finalSpeechText, result.emotion);
                 } catch (err) {
-                    // TTS失敗時のギャグフォールバック
                     if (!window.hasApologizedForFallback) {
                         const gag = fallbackGags[Math.floor(Math.random() * fallbackGags.length)];
                         finalSpeechText = gag + " " + finalSpeechText;
@@ -969,26 +1087,23 @@ ${JSON.stringify(relationMemory)}
                 }
             }
 
-            // --- [Step 4] UI更新・再生開始 ---
             botMsgDiv.innerHTML = finalSpeechText;
             chatHistory.push({ role: 'bot', content: finalSpeechText }); 
             localStorage.setItem('vrm_chatHistory', JSON.stringify(chatHistory));
             
-            triggerAvatarActionOnly(result.emotion, finalGesture, duration);
+            triggerAvatarActionSequence(result.emotion, gesturesArr);
 
             if (audioUrl) {
                 audioPlayer.src = audioUrl;
                 try {
                     await audioPlayer.play();
                 } catch(e) {
-                    // 再生ブロックされた場合はWebSpeechにフォールバック
                     speakTextWithWebSpeech(finalSpeechText);
                 }
             } else {
                 speakTextWithWebSpeech(finalSpeechText);
             }
 
-            // --- [Step 5] 完了・Quick Replies表示 ---
             if (result.quick_replies) { 
                 result.quick_replies.forEach(text => { 
                     const btn = document.createElement('button'); 
@@ -1003,7 +1118,7 @@ ${JSON.stringify(relationMemory)}
         sendBtn.addEventListener('click', () => { 
             const text = chatInput.value.trim(); 
             if (text) {
-                audioPlayer.play().catch(()=>{}); audioPlayer.pause(); // モバイルでの制限解除トリガー
+                audioPlayer.play().catch(()=>{}); audioPlayer.pause();
                 callGeminiAPI(text); 
             }
         }); 
