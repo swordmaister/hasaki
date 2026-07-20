@@ -1,7 +1,9 @@
 <!--
-  ============================================================================
-  VRM Live Avatar Studio ― 統合版 (プレイリスト機能・ライティング改善版)
-  ============================================================================
+  VRM Live Avatar Studio - Improved Version
+  - Live mode カメラ自動調整をアバターサイズに対応
+  - 複数の前進モーション後の自然な戻り動作
+  - Live mode 中の話者切り替え時の自然な流れ
+  - ダウンロード機能の修正（Blob方式）
 -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -16,7 +18,6 @@
     --text-main: #EDEFF3;
     --text-muted: #8B92A0;
     --accent-live: #FF3B4E;
-    --accent-live-dim: #7a1e26;
     --accent-active: #3ED6C4;
     --accent-warn: #FFB020;
     --accent-info: #5B8CFF;
@@ -27,23 +28,17 @@
   body, html {
     margin:0; padding:0; width:100%; height:100%; overflow:hidden; position:fixed;
     background: linear-gradient(180deg, #eef3f6 0%, #dbe6ec 100%);
-    font-family: var(--font-ui); color: var(--text-main); user-select:none; -webkit-user-select:none;
+    font-family: var(--font-ui); color: var(--text-main); user-select:none;
   }
   canvas { display:block; position:absolute; top:0; left:0; z-index:1; }
-
-  /* ---------- ローディング ---------- */
   #loading-overlay {
     position:absolute; inset:0; background:rgba(10,11,15,0.94); color:#fff;
     display:none; align-items:center; justify-content:center; z-index:60; font-weight:bold; flex-direction:column;
   }
   #loading-error-text { color:#ff8a8a; font-size:12px; max-width:80%; text-align:center; margin-top:10px; }
-
-  /* ---------- トースト通知 ---------- */
   #toastBox { position:absolute; top:64px; left:50%; transform:translateX(-50%); z-index:80; display:flex; flex-direction:column; gap:8px; pointer-events:none; align-items:center; }
   .toast { padding:10px 18px; border-radius:20px; color:#fff; font-weight:bold; font-size:13px; background:rgba(20,22,28,0.92); border:1px solid var(--border-soft); opacity:0; transform:translateY(-12px); transition:all .3s ease; }
   .toast.show { opacity:1; transform:translateY(0); }
-
-  /* ---------- ステータスLED + ラベル ---------- */
   #status-pill {
     position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:50;
     display:flex; align-items:center; gap:8px; background:var(--bg-panel); backdrop-filter:blur(10px);
@@ -51,11 +46,9 @@
   }
   #statusLed { width:11px; height:11px; border-radius:50%; background:#666; transition:background-color .25s, box-shadow .25s; }
   #statusLed.listening { background:var(--accent-active); box-shadow:0 0 10px var(--accent-active); }
-  #statusLed.thinking  { background:var(--accent-warn); box-shadow:0 0 10px var(--accent-warn); }
-  #statusLed.speaking  { background:var(--accent-info); box-shadow:0 0 10px var(--accent-info); }
+  #statusLed.thinking { background:var(--accent-warn); box-shadow:0 0 10px var(--accent-warn); }
+  #statusLed.speaking { background:var(--accent-info); box-shadow:0 0 10px var(--accent-info); }
   #statusLabel { font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:.02em; }
-
-  /* ---------- コントロールデッキ(右上のボタン群) ---------- */
   #control-deck {
     position:absolute; top:14px; right:14px; z-index:50; display:flex; gap:8px;
     background:var(--bg-panel); backdrop-filter:blur(10px); border:1px solid var(--border-soft);
@@ -67,7 +60,6 @@
     transition: background .2s, transform .1s;
   }
   .deck-btn:active { transform:scale(0.92); }
-  .deck-btn.active-toggle { background:var(--accent-active); color:#0a0a0a; }
   #live-toggle-btn {
     width:auto; padding:0 18px; border-radius:21px; font-family:var(--font-mono); font-weight:bold; font-size:13px;
     background:transparent; border:2px solid var(--accent-live); color:var(--accent-live); letter-spacing:.05em;
@@ -75,16 +67,14 @@
   #live-toggle-btn.on { background:var(--accent-live); color:#fff; border-color:var(--accent-live); animation: live-pulse 1.7s infinite; }
   @keyframes live-pulse {
     0%,100% { box-shadow: 0 0 0 0 rgba(255,59,78,0.55); }
-    50%     { box-shadow: 0 0 0 9px rgba(255,59,78,0); }
+    50% { box-shadow: 0 0 0 9px rgba(255,59,78,0); }
   }
-
-  /* ---------- パネル共通 ---------- */
   .panel {
     position:absolute; top:64px; right:14px; width:320px; max-width:90vw; max-height:78vh; overflow-y:auto;
     background:var(--bg-panel); backdrop-filter:blur(12px); border:1px solid var(--border-soft);
     border-radius:16px; padding:16px; z-index:45; display:none; color:var(--text-main); font-size:13px;
   }
-  .panel h3 { margin:0 0 8px; font-size:13px; color:var(--accent-active); border-bottom:1px solid var(--border-soft); padding-bottom:6px; letter-spacing:.03em; }
+  .panel h3 { margin:0 0 8px; font-size:13px; color:var(--accent-active); border-bottom:1px solid var(--border-soft); padding-bottom:6px; }
   .panel label { display:block; font-size:12px; margin-bottom:5px; color:var(--text-muted); }
   .field-group { margin-bottom:14px; }
   input[type="password"], input[type="text"], select, textarea {
@@ -105,15 +95,12 @@
   .shortcut-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding-bottom:4px; border-bottom:1px solid var(--border-soft); font-size:11px; }
   .shortcut-row .name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px; }
   .mini-btn { padding:4px 8px; border:none; border-radius:6px; font-size:11px; cursor:pointer; color:#fff; }
-
-  /* ---------- Liveパネル(配信中のみ表示) ---------- */
   #live-panel {
     position:absolute; left:50%; bottom:14px; transform:translateX(-50%); z-index:40;
     width:min(560px, 92vw); display:none; flex-direction:column; gap:10px; align-items:center;
   }
   body.is-live #live-panel { display:flex; }
   body.is-live #chat-container { display:none; }
-
   #live-captions {
     width:100%; background:rgba(10,11,15,0.55); backdrop-filter:blur(6px); border-radius:12px; padding:10px 14px;
     font-size:13px; line-height:1.5; min-height:20px; color:#fff;
@@ -121,53 +108,37 @@
   .caption-line { opacity:0.95; }
   .caption-line.user { color:#cfe8ff; }
   .caption-line.ai { color:#fff; font-weight:bold; margin-top:2px; }
-
   #live-quick-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
   .quick-act-btn {
     width:50px; height:50px; border-radius:50%; border:1px solid var(--border-soft); cursor:pointer; font-size:20px;
     background:var(--bg-panel); backdrop-filter:blur(8px); color:#fff;
   }
   .quick-act-btn:active { transform:scale(0.9); background:var(--accent-active); }
-  .mic-command-btn.active { background:var(--accent-live) !important; }
-
-  /* ---------- チャットUI(通常モード) ---------- */
   #chat-container {
     position:absolute; bottom:0; left:0; width:100%; box-sizing:border-box;
     padding:8px 10px 14px; display:flex; flex-direction:column; gap:8px; z-index:30; pointer-events:none;
-    transition: opacity 0.3s ease;
   }
-  /* ★透明化ボタン対応のCSSを追加 */
   #chat-container.transparent-mode { opacity: 0.15; }
   #chat-container.transparent-mode:hover { opacity: 1.0; }
-
   #chat-toolbar { display:flex; gap:6px; pointer-events:auto; align-self:flex-end; flex-wrap:wrap; justify-content:flex-end; }
-  .tool-btn { background:rgba(10,11,15,0.65); color:#fff; border:none; border-radius:14px; padding:6px 10px; font-size:11px; cursor:pointer; backdrop-filter:blur(4px); }
-  .tool-btn.active { background:var(--accent-live); }
-
-  #chat-history { max-height:26vh; overflow-y:auto; pointer-events:auto; display:flex; flex-direction:column; gap:8px; padding:2px; scrollbar-width:none; }
-  #chat-history::-webkit-scrollbar { display:none; }
+  .tool-btn { background:rgba(10,11,15,0.65); color:#fff; border:none; border-radius:14px; padding:6px 10px; font-size:11px; cursor:pointer; }
+  #chat-history { max-height:26vh; overflow-y:auto; pointer-events:auto; display:flex; flex-direction:column; gap:8px; padding:2px; }
   .msg { max-width:85%; padding:9px 13px; border-radius:16px; font-size:14px; line-height:1.4; word-wrap:break-word; box-shadow:0 2px 6px rgba(0,0,0,0.12); }
-  .msg.user { align-self:flex-end; background:#E3F2FD; color:#12314a; border-bottom-right-radius:3px; }
-  .msg.bot { align-self:flex-start; background:#ffffff; color:#1a1a1a; border-bottom-left-radius:3px; }
+  .msg.user { align-self:flex-end; background:#E3F2FD; color:#12314a; }
+  .msg.bot { align-self:flex-start; background:#ffffff; color:#1a1a1a; }
   .blinking-dots { animation: blink 1.4s infinite both; }
   @keyframes blink { 0%{opacity:.2;} 20%{opacity:1;} 100%{opacity:.2;} }
-
-  #quick-replies { display:flex; gap:8px; overflow-x:auto; pointer-events:auto; scrollbar-width:none; }
-  #quick-replies::-webkit-scrollbar { display:none; }
+  #quick-replies { display:flex; gap:8px; overflow-x:auto; pointer-events:auto; }
   .qr-btn { padding:8px 14px; background:var(--accent-info); color:#fff; border:none; border-radius:18px; font-size:13px; font-weight:bold; cursor:pointer; white-space:nowrap; flex-shrink:0; }
-
   #input-area { display:flex; gap:8px; pointer-events:auto; background:rgba(255,255,255,0.92); backdrop-filter:blur(6px); padding:5px; border-radius:26px; box-shadow:0 3px 12px rgba(0,0,0,0.14); }
   #chat-input { flex:1; padding:9px 14px; border:none; border-radius:22px; outline:none; font-size:15px; background:transparent; color:#1a1a1a; }
   #send-btn, #mic-cmd-btn-inline { background:var(--accent-info); color:#fff; border:none; border-radius:50%; width:40px; height:40px; font-size:16px; cursor:pointer; flex-shrink:0; }
   #mic-cmd-btn-inline.active { background:var(--accent-live); }
-
-  /* ---------- 移動用パッド ---------- */
   #action-pad {
     position:absolute; bottom:150px; left:14px; z-index:35; display:none;
     grid-template-columns:38px 38px 38px; grid-template-rows:38px 38px 38px; gap:5px; opacity:0.65;
   }
   #action-pad.show { display:grid; }
-  #action-pad:active { opacity:1; }
   .pad-btn { background:rgba(10,11,15,0.6); color:#fff; border:1px solid var(--border-soft); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; }
   #btn-up{grid-column:2;grid-row:1;} #btn-left{grid-column:1;grid-row:2;} #btn-fly{grid-column:2;grid-row:2;border-radius:50%;font-size:12px;} #btn-right{grid-column:3;grid-row:2;} #btn-down{grid-column:2;grid-row:3;}
 </style>
@@ -197,7 +168,6 @@
     <span id="statusLabel">待機中</span>
   </div>
 
-  <!-- コントロールデッキ: 設定 / モーション管理 / Liveモード切替 -->
   <div id="control-deck">
     <button class="deck-btn" id="settings-toggle" title="設定" onclick="toggleSettings()">⚙️</button>
     <button class="deck-btn" id="vrma-toggle" title="モーション管理" onclick="toggleVrmaPanel()">🎬</button>
@@ -205,7 +175,6 @@
     <button id="live-toggle-btn" title="Liveモード切替" onclick="toggleLiveMode()">● LIVE</button>
   </div>
 
-  <!-- ================= 設定パネル ================= -->
   <div class="panel" id="settings-panel">
     <h3>⚙️ 基本設定</h3>
     <div class="field-group">
@@ -220,91 +189,54 @@
     <div class="field-group">
       <label>Live会話用モデル</label>
       <select id="live-model-select">
-        <option value="gemini-3.1-flash-live-preview">gemini-3.1-flash-live-preview (推奨/最新)</option>
-        <option value="gemini-2.5-flash-native-audio-preview-12-2025">gemini-2.5-flash-native-audio-preview-12-2025 (旧・非推奨)</option>
+        <option value="gemini-3.1-flash-live-preview">gemini-3.1-flash-live-preview</option>
       </select>
-      <input type="text" id="live-model-custom" placeholder="カスタムモデルID (任意・入力時は上記より優先)">
-      <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">
-        ※Google側でモデル名は頻繁に更新されます。上の一覧が古くなった場合はここに正確なモデルIDを直接入力してください。
-      </div>
+      <input type="text" id="live-model-custom" placeholder="カスタムモデルID">
     </div>
     <div class="field-group" style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
       <label style="display:flex; align-items:center; gap:6px; color:var(--accent-active); font-weight:bold;">
-        <input type="checkbox" id="use-gemini-tts" checked style="width:auto;"> 🤖 通常チャットでGemini TTSを使う
+        <input type="checkbox" id="use-gemini-tts" checked style="width:auto;"> 🤖 Gemini TTS
       </label>
-      <label>音声(Live/TTS共通・声質)</label>
+      <label>音声</label>
       <select id="tts-voice-select">
-        <option value="Aoede">Aoede (女性的・落ち着いた声)</option>
-        <option value="Kore">Kore (女性的・明るい声)</option>
-        <option value="Puck">Puck (中性的・柔らかい声)</option>
-        <option value="Charon">Charon (男性的・重厚な声)</option>
-        <option value="Fenrir">Fenrir (男性的・ハキハキした声)</option>
+        <option value="Aoede">Aoede</option>
+        <option value="Kore">Kore</option>
+        <option value="Puck">Puck</option>
       </select>
-      <label>TTS追加指示 (通常チャット用・任意)</label>
-      <input type="text" id="tts-custom-prompt" placeholder="例: 少し照れくさそうに">
-      <div style="border-top:1px solid var(--border-soft); margin-top:8px; padding-top:8px;">
-        <label>フォールバック用ブラウザ音声</label>
-        <select id="voice-select"></select>
-      </div>
     </div>
-
     <details>
-      <summary>🎙️ 音声コマンド (「手を振って」等)</summary>
-      <div style="font-size:11px; color:var(--text-muted); margin:8px 0;">
-        マイクボタンを押すと音声コマンド認識が始まります。「手を振って」「お辞儀して」
-        「ジャンプして」等のフレーズを検知すると、AIを介さず即座にモーションを再生します。
-        コマンド以外の発話は、通常モード中はそのままチャット送信されます。
-      </div>
-      <button class="action-btn subtle mic-command-btn" onclick="toggleVoiceCommand()">🎤 音声コマンド認識 開始/停止</button>
+      <summary>🎙️ 音声コマンド</summary>
+      <button class="action-btn subtle mic-command-btn" onclick="toggleVoiceCommand()">🎤 認識開始/停止</button>
     </details>
-
     <details>
-      <summary>🦴 姿勢の微調整 (上級者向け)</summary>
+      <summary>🦴 姿勢調整</summary>
       <div class="field-group" style="margin-top:8px;">
         <label>移動速度: <span id="speed-val">1.8</span></label>
         <input type="range" id="speed-slider" min="0.5" max="4.0" step="0.1" value="1.8">
       </div>
-      <div class="field-group">
-        <label>前傾(猫背)↔後傾(反り腰): <span id="posture-val">0.000</span></label>
-        <input type="range" id="posture-slider" min="-0.4" max="0.4" step="0.001" value="0.0">
-      </div>
-      <label style="display:flex; align-items:center; gap:6px;">
-        <input type="checkbox" id="axis-fix" style="width:auto;"> 肘・膝の反転補正 (X/Z軸入替)
-      </label>
     </details>
-
     <details>
-      <summary>📝 キャラクター設定 (JSON)</summary>
-      <textarea id="json-text" rows="3" placeholder="ここにJSONをペーストして編集できます" style="margin-top:8px;"></textarea>
-      <button class="action-btn" onclick="applyJsonText()">テキストから適用</button>
+      <summary>📝 キャラクター設定</summary>
+      <textarea id="json-text" rows="3" style="margin-top:8px;"></textarea>
+      <button class="action-btn" onclick="applyJsonText()">適用</button>
     </details>
-
     <details>
       <summary>🧠 データ管理</summary>
       <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
-        <button class="action-btn subtle" onclick="exportMemory()">長期記憶をダウンロード</button>
-        <div><label style="margin-bottom:2px;">長期記憶を復元:</label><input type="file" id="memory-file" accept=".json"></div>
+        <button class="action-btn subtle" onclick="exportMemory()">記憶をダウンロード</button>
         <button class="action-btn subtle" onclick="exportChatLog()">会話ログをダウンロード</button>
-        <button class="action-btn danger" onclick="clearMemory()">すべてリセット</button>
+        <button class="action-btn danger" onclick="clearMemory()">リセット</button>
       </div>
     </details>
   </div>
 
-  <!-- ================= VRMAモーション管理パネル (プレイリスト追加) ================= -->
   <div class="panel" id="vrma-panel">
-    <h3>🎬 モーション管理・プレイリスト</h3>
-    <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">
-      複数の.vrmaファイルを登録できます。ファイル名(拡張子なし)がそのまま呼出名になります。
-    </div>
+    <h3>🎬 モーション管理</h3>
     <input type="file" id="vrma-file" accept=".vrma" multiple>
     <button class="action-btn" onclick="saveMultipleVrma()">一括登録</button>
-
-    <div id="playlist-container" style="margin-top:14px;"></div>
     <div id="vrma-shortcut-container" style="margin-top:10px;"></div>
-    <div id="builtin-motion-container" style="margin-top:10px;"></div>
   </div>
 
-  <!-- ================= Liveモード時のUI(字幕+クイックアクション) ================= -->
   <div id="live-panel">
     <div id="live-captions">
       <div id="caption-user" class="caption-line user"></div>
@@ -317,27 +249,24 @@
       <button class="quick-act-btn" title="喜ぶ" onclick="playVRMA('joy')">😆</button>
       <button class="quick-act-btn" title="驚く" onclick="playVRMA('surprised')">😲</button>
       <button class="quick-act-btn" title="ジャンプ" onclick="playVRMA('jump')">🤸</button>
-      <button class="quick-act-btn mic-command-btn" title="音声コマンド認識" onclick="toggleVoiceCommand()">🎤</button>
     </div>
   </div>
 
-  <!-- ================= 通常モード: チャットUI ================= -->
   <div id="chat-container">
     <div id="chat-toolbar">
-      <button class="tool-btn" onclick="clearDisplay()">🧹 画面クリア</button>
+      <button class="tool-btn" onclick="clearDisplay()">🧹 クリア</button>
       <button class="tool-btn" id="transparency-btn" onclick="toggleTransparency()">👁️ 透明化</button>
       <button class="tool-btn" onclick="resetCamera()">📷 視点リセット</button>
     </div>
     <div id="chat-history"></div>
     <div id="quick-replies"></div>
     <div id="input-area">
-      <button id="mic-cmd-btn-inline" class="mic-command-btn" title="音声入力/コマンド" onclick="toggleVoiceCommand()">🎤</button>
+      <button id="mic-cmd-btn-inline" class="mic-command-btn" title="音声コマンド" onclick="toggleVoiceCommand()">🎤</button>
       <input type="text" id="chat-input" placeholder="メッセージを入力..." autocomplete="off">
       <button id="send-btn">➤</button>
     </div>
   </div>
 
-  <!-- ================= 移動パッド ================= -->
   <div id="action-pad">
     <div class="pad-btn" id="btn-up">⬆️</div>
     <div class="pad-btn" id="btn-left">⬅️</div>
@@ -358,25 +287,6 @@ import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-v
 const FAST_MODEL_ID = 'gemini-3.1-flash-lite';
 const TTS_MODEL_CANDIDATES = ['gemini-2.5-flash-preview-tts', 'gemini-3.1-flash-preview-tts'];
 
-window.addEventListener('error', (e) => {
-  const errorText = document.getElementById('loading-error-text');
-  const overlay = document.getElementById('loading-overlay');
-  if (overlay.style.display === 'flex') {
-    errorText.innerHTML = `内部エラー<br><span style="font-size:10px; word-break:break-all;">${e.message}</span>`;
-    errorText.innerHTML += `<br><button style="margin-top:10px; padding:6px 12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('loading-overlay').style.display='none';">閉じる</button>`;
-  }
-});
-window.addEventListener('unhandledrejection', (e) => {
-  const errorText = document.getElementById('loading-error-text');
-  const overlay = document.getElementById('loading-overlay');
-  if (overlay.style.display === 'flex') {
-    const msg = e.reason?.message || e.reason || '不明なPromiseエラー';
-    errorText.innerHTML = `内部エラー(非同期)<br><span style="font-size:10px; word-break:break-all;">${msg}</span>`;
-    errorText.innerHTML += `<br><button style="margin-top:10px; padding:6px 12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('loading-overlay').style.display='none';">閉じる</button>`;
-  }
-});
-
-/* ★ パネルをすべて閉じる関数 (グローバル公開) */
 window.closeAllPanels = () => {
   document.getElementById('settings-panel').style.display = 'none';
   document.getElementById('vrma-panel').style.display = 'none';
@@ -395,144 +305,22 @@ function showToastMessage(msg) {
   setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3200);
 }
 
-/* ============================================================
-   プレイリスト機能のロジックとUI
-============================================================ */
-window.playlist = [];
-window.isPlaylistPlaying = false;
-
-window.addToPlaylist = (name) => {
-  window.playlist.push(name);
-  window.updatePlaylistUI();
-  showToastMessage(`「${name}」をプレイリストに追加`);
-};
-window.removeFromPlaylist = (idx) => {
-  window.playlist.splice(idx, 1);
-  window.updatePlaylistUI();
-};
-window.clearPlaylist = () => {
-  window.playlist = [];
-  window.updatePlaylistUI();
-};
-
-window.playPlaylist = async () => {
-  if (window.playlist.length === 0) { showToastMessage("プレイリストが空です"); return; }
-  window.isPlaylistPlaying = true;
-  window.closeAllPanels(); 
-  const loopCheckbox = document.getElementById('playlist-loop');
-  
-  let i = 0;
-  while (window.isPlaylistPlaying) {
-    let motionName = window.playlist[i];
-    
-    // playVRMA から「アニメーションの長さ(ms)」を受け取る
-    let waitTime = await window.playVRMA(motionName); 
-    if (!waitTime) waitTime = 2500;
-    
-    // ★ 修正点: setTimeoutの蓄積誤差を防ぐため、内部時計(Date.now)を基準に待機する
-    const startTime = Date.now();
-    while (Date.now() - startTime < waitTime && window.isPlaylistPlaying) {
-       await new Promise(r => setTimeout(r, 50));
-    }
-    
-    if (!window.isPlaylistPlaying) break; // 中断されたらループ終了
-
-    i++;
-    if (i >= window.playlist.length) {
-      if (loopCheckbox && loopCheckbox.checked) {
-        i = 0; // ループ再生
-      } else {
-        window.isPlaylistPlaying = false;
-        break;
-      }
-    }
-  }
-};
-
-window.stopPlaylist = () => {
-  window.isPlaylistPlaying = false;
-  showToastMessage("プレイリストを停止しました");
-};
-
-window.updatePlaylistUI = () => {
-  const c = document.getElementById('playlist-container');
-  if (window.playlist.length > 0) {
-    let html = '<div style="background:rgba(0,0,0,0.3); padding:8px; border-radius:8px; margin-bottom:8px;">';
-    html += '<div style="font-size:11px; margin-bottom:6px; color:var(--accent-info); font-weight:bold;">📋 プレイリスト</div>';
-    window.playlist.forEach((name, idx) => {
-      html += `<div class="shortcut-row"><div class="name" title="${name}">${idx+1}. ${name}</div>
-        <button class="mini-btn" style="background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="removeFromPlaylist(${idx})">×</button></div>`;
-    });
-    html += `<div style="display:flex; gap:6px; margin-top:8px;">
-               <label style="display:flex; align-items:center; gap:4px; font-size:11px;"><input type="checkbox" id="playlist-loop" checked style="width:auto;margin:0;">ループ再生</label>
-             </div>
-             <div style="display:flex; gap:6px; margin-top:6px;">
-               <button class="action-btn" onclick="playPlaylist()">▶ 再生</button>
-               <button class="action-btn danger" onclick="stopPlaylist()">■ 停止</button>
-               <button class="action-btn subtle" onclick="clearPlaylist()">クリア</button>
-             </div></div>`;
-    c.innerHTML = html;
-  } else {
-    c.innerHTML = '<div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">プレイリストは空です。下の「＋」で追加できます。</div>';
-  }
-};
-
-
-/* 設定値初期化 */
 let voices = [];
 function populateVoiceList() {
   voices = window.speechSynthesis.getVoices();
-  const vs = document.getElementById('voice-select');
-  vs.innerHTML = '';
-  voices.forEach((v, i) => { const o = document.createElement('option'); o.textContent = `${v.name} (${v.lang})`; o.value = i; vs.appendChild(o); });
-  const s = localStorage.getItem('vrm_voiceIndex');
-  if (s !== null && voices[s]) vs.value = s;
 }
 populateVoiceList();
 if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = populateVoiceList;
-document.getElementById('voice-select').addEventListener('change', (e) => localStorage.setItem('vrm_voiceIndex', e.target.value));
-
-const axisFixCheckbox = document.getElementById('axis-fix');
-axisFixCheckbox.checked = localStorage.getItem('vrm_axisFix') === 'true';
-axisFixCheckbox.addEventListener('change', (e) => localStorage.setItem('vrm_axisFix', e.target.checked));
-
-const useGeminiTtsCheckbox = document.getElementById('use-gemini-tts');
-useGeminiTtsCheckbox.checked = localStorage.getItem('vrm_useGeminiTts') !== 'false';
-useGeminiTtsCheckbox.addEventListener('change', (e) => localStorage.setItem('vrm_useGeminiTts', e.target.checked));
-
-const ttsVoiceSelect = document.getElementById('tts-voice-select');
-const savedTtsVoice = localStorage.getItem('vrm_ttsVoice');
-if (savedTtsVoice) ttsVoiceSelect.value = savedTtsVoice;
-ttsVoiceSelect.addEventListener('change', (e) => localStorage.setItem('vrm_ttsVoice', e.target.value));
-
-const ttsCustomPromptInput = document.getElementById('tts-custom-prompt');
-const savedTtsCustomPrompt = localStorage.getItem('vrm_ttsCustomPrompt');
-if (savedTtsCustomPrompt) ttsCustomPromptInput.value = savedTtsCustomPrompt;
-ttsCustomPromptInput.addEventListener('change', (e) => localStorage.setItem('vrm_ttsCustomPrompt', e.target.value));
 
 const apiKeyInput = document.getElementById('api-key');
 apiKeyInput.value = localStorage.getItem('vrm_apiKey') || '';
 apiKeyInput.addEventListener('change', (e) => localStorage.setItem('vrm_apiKey', e.target.value));
-
-const liveModelSelect = document.getElementById('live-model-select');
-liveModelSelect.value = localStorage.getItem('vrm_liveModel') || 'gemini-3.1-flash-live-preview';
-liveModelSelect.addEventListener('change', (e) => localStorage.setItem('vrm_liveModel', e.target.value));
-const liveModelCustom = document.getElementById('live-model-custom');
-liveModelCustom.value = localStorage.getItem('vrm_liveModelCustom') || '';
-liveModelCustom.addEventListener('change', (e) => localStorage.setItem('vrm_liveModelCustom', e.target.value));
-
-const postureSlider = document.getElementById('posture-slider');
-const postureVal = document.getElementById('posture-val');
-let postureOffset = parseFloat(localStorage.getItem('vrm_postureOffset')) || 0.0;
-postureSlider.value = postureOffset; postureVal.textContent = postureOffset.toFixed(3);
-postureSlider.addEventListener('input', (e) => { postureOffset = parseFloat(e.target.value); postureVal.textContent = postureOffset.toFixed(3); localStorage.setItem('vrm_postureOffset', postureOffset); });
 
 const speedSlider = document.getElementById('speed-slider');
 const speedVal = document.getElementById('speed-val');
 let moveSpeed = parseFloat(localStorage.getItem('vrm_moveSpeed')) || 1.8;
 speedSlider.value = moveSpeed; speedVal.textContent = moveSpeed.toFixed(1);
 speedSlider.addEventListener('input', (e) => { moveSpeed = parseFloat(e.target.value); speedVal.textContent = moveSpeed.toFixed(1); localStorage.setItem('vrm_moveSpeed', moveSpeed); });
-
 
 const DB_NAME = 'VrmStorageDB_v3';
 const STORE_NAME = 'VrmStore';
@@ -552,28 +340,31 @@ function openDB() {
 
 async function saveVRMToIDB(file) {
   const db = await openDB();
-  db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).getAll().onsuccess = (e) => {
-    let records = e.target.result || [];
-    records = records.filter(r => r.name !== file.name);
-    records.unshift({ file, name: file.name, time: Date.now() });
-    if (records.length > 3) records = records.slice(0, 3);
-    const tx2 = db.transaction(STORE_NAME, 'readwrite');
-    const store2 = tx2.objectStore(STORE_NAME);
-    store2.clear().onsuccess = () => { records.forEach((rec, i) => store2.put(rec, 'vrm_' + i)); updateVRMShortcutUI(); };
-  };
-}
-async function getSavedVRMs() {
-  const db = await openDB();
-  return new Promise(r => db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).getAll().onsuccess = e => {
-    let records = e.target.result || [];
-    records.sort((a, b) => b.time - a.time); r(records);
+  return new Promise(r => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const getAllReq = store.getAll();
+    getAllReq.onsuccess = () => {
+      let records = getAllReq.result || [];
+      records = records.filter(r => r.name !== file.name);
+      records.unshift({ file, name: file.name, time: Date.now() });
+      if (records.length > 3) records = records.slice(0, 3);
+      store.clear();
+      records.forEach((rec, i) => store.put(rec, 'vrm_' + i));
+      tx.oncomplete = () => { updateVRMShortcutUI(); r(); };
+    };
   });
 }
+
 function updateVRMShortcutUI() {
-  getSavedVRMs().then(records => {
+  (async () => {
+    const db = await openDB();
+    const records = await new Promise(r => {
+      db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).getAll().onsuccess = e => r(e.target.result);
+    });
     const c = document.getElementById('vrm-shortcut-container');
     if (records && records.length > 0) {
-      let html = '<div style="font-size:11px; margin-top:8px; color:var(--text-muted);">💾 最近使用したVRM:</div>';
+      let html = '<div style="font-size:11px; margin-top:8px; color:var(--text-muted);">💾 最近:</div>';
       records.forEach((r, idx) => {
         html += `<div class="shortcut-row"><div class="name" title="${r.name}">${r.name}</div>
           <div style="display:flex; gap:5px;">
@@ -581,21 +372,29 @@ function updateVRMShortcutUI() {
             <button class="mini-btn" style="background:var(--accent-live);" onclick="removeSavedVRM(${idx})">削除</button>
           </div></div>`;
       });
-      c.innerHTML = html; window.savedVRMRecords = records;
-    } else { c.innerHTML = ''; window.savedVRMRecords = []; }
-  });
+      c.innerHTML = html;
+      window.savedVRMRecords = records;
+    } else {
+      c.innerHTML = '';
+      window.savedVRMRecords = [];
+    }
+  })();
 }
+updateVRMShortcutUI();
+
 window.loadSavedVRM = (idx) => { const r = window.savedVRMRecords[idx]; if (r && r.file) loadVRMData(r.file); };
 window.removeSavedVRM = async (idx) => {
   const r = window.savedVRMRecords[idx];
   if (r) {
     let records = window.savedVRMRecords.filter((_, i) => i !== idx);
     const db = await openDB();
-    const store = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME);
-    store.clear().onsuccess = () => { records.forEach((rec, i) => store.put(rec, 'vrm_' + i)); updateVRMShortcutUI(); };
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.clear();
+    records.forEach((rec, i) => store.put(rec, 'vrm_' + i));
+    tx.oncomplete = () => updateVRMShortcutUI();
   }
 };
-updateVRMShortcutUI();
 
 window.savedVrmaRecords = [];
 window.saveMultipleVrma = async () => {
@@ -618,49 +417,35 @@ window.saveMultipleVrma = async () => {
     showToastMessage(`🎬 ${count}件のモーションを登録しました`);
   };
 };
-async function getSavedVrmas() {
-  const db = await openDB();
-  return new Promise(r => db.transaction(MOTION_STORE, 'readonly').objectStore(MOTION_STORE).getAll().onsuccess = e => {
-    let records = e.target.result || [];
-    records.sort((a, b) => b.time - a.time); r(records);
-  });
-}
+
 window.updateVrmaUI = () => {
-  getSavedVrmas().then(records => {
+  (async () => {
+    const db = await openDB();
+    const records = await new Promise(r => {
+      db.transaction(MOTION_STORE, 'readonly').objectStore(MOTION_STORE).getAll().onsuccess = e => r(e.target.result);
+    });
     window.savedVrmaRecords = records;
     const c = document.getElementById('vrma-shortcut-container');
     if (records.length > 0) {
-      let html = '<div style="font-size:11px; margin-bottom:6px; color:var(--text-muted);">🎬 登録済みモーション:</div>';
+      let html = '<div style="font-size:11px; margin-bottom:6px; color:var(--text-muted);">登録済みモーション:</div>';
       records.forEach(r => {
         html += `<div class="shortcut-row"><div class="name" title="${r.name}">${r.name}</div>
           <div style="display:flex; gap:5px;">
-            <button class="mini-btn" style="background:var(--accent-info);" onclick="addToPlaylist('${r.name}')" title="プレイリストに追加">＋</button>
-            <button class="mini-btn" style="background:var(--accent-active); color:#0a0a0a;" onclick="playVRMA('${r.name}'); closeAllPanels();" title="再生">▶</button>
+            <button class="mini-btn" style="background:var(--accent-active); color:#0a0a0a;" onclick="playVRMA('${r.name}'); closeAllPanels();">▶</button>
             <button class="mini-btn" style="background:var(--accent-live);" onclick="removeSavedVrma('${r.name}')">×</button>
           </div></div>`;
       });
       c.innerHTML = html;
-    } else { c.innerHTML = '<div style="font-size:11px; color:var(--text-muted);">登録済みモーションなし</div>'; }
-    
-    // 組み込みモーション一覧をVRMAパネルに追加
-    const builtinC = document.getElementById('builtin-motion-container');
-    let bHtml = '<details><summary style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">組み込み標準モーション一覧</summary>';
-    BUILTIN_GESTURE_NAMES.forEach(name => {
-      bHtml += `<div class="shortcut-row"><div class="name" title="${name}">${name}</div>
-          <div style="display:flex; gap:5px;">
-            <button class="mini-btn" style="background:var(--accent-info);" onclick="addToPlaylist('${name}')" title="プレイリストに追加">＋</button>
-            <button class="mini-btn" style="background:var(--accent-active); color:#0a0a0a;" onclick="playVRMA('${name}'); closeAllPanels();" title="再生">▶</button>
-          </div></div>`;
-    });
-    bHtml += '</details>';
-    builtinC.innerHTML = bHtml;
-    
-    window.updatePlaylistUI();
-  });
+    } else {
+      c.innerHTML = '<div style="font-size:11px; color:var(--text-muted);">未登録</div>';
+    }
+  })();
 };
 window.removeSavedVrma = async (name) => {
   const db = await openDB();
-  db.transaction(MOTION_STORE, 'readwrite').objectStore(MOTION_STORE).delete(name).onsuccess = () => window.updateVrmaUI();
+  const tx = db.transaction(MOTION_STORE, 'readwrite');
+  tx.objectStore(MOTION_STORE).delete(name);
+  tx.oncomplete = () => window.updateVrmaUI();
 };
 window.updateVrmaUI();
 
@@ -669,9 +454,6 @@ let relationMemory = JSON.parse(localStorage.getItem('vrm_relationMemory')) || {
 let characterSettings = JSON.parse(localStorage.getItem('vrm_characterSettings')) || null;
 if (characterSettings) { document.getElementById('json-text').value = JSON.stringify(characterSettings, null, 2); }
 
-/* ============================================================
-   Three.js シーン構築 と ライティングの改善
-============================================================ */
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 50);
 camera.position.set(0, 1.4, 4.2);
@@ -679,21 +461,23 @@ camera.position.set(0, 1.4, 4.2);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.outputColorSpace = THREE.SRGBColorSpace; 
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 1.0, 0);
-controls.enableDamping = true; controls.dampingFactor = 0.05; controls.enablePan = true;
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.enablePan = true;
 let isCameraFollowing = true;
 controls.addEventListener('start', () => { isCameraFollowing = false; });
 window.resetCamera = () => { isCameraFollowing = true; };
 
 const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
-dirLight.position.set(0, 1, 2).normalize(); 
+dirLight.position.set(0, 1, 2).normalize();
 scene.add(dirLight);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); 
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
 scene.add(ambientLight);
 
 const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
@@ -704,15 +488,22 @@ scene.add(new THREE.GridHelper(20, 20, 0xaaaaaa, 0xdddddd));
 
 const benchGroup = new THREE.Group();
 const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: 0.8 });
-const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.4), woodMat); seat.position.set(0, 0.35, 0); benchGroup.add(seat);
-const back = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.25, 0.05), woodMat); back.position.set(0, 0.55, -0.175); benchGroup.add(back);
+const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.4), woodMat);
+seat.position.set(0, 0.35, 0);
+benchGroup.add(seat);
+const back = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.25, 0.05), woodMat);
+back.position.set(0, 0.55, -0.175);
+benchGroup.add(back);
 const legGeo = new THREE.BoxGeometry(0.05, 0.35, 0.05);
 const legMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 });
-[[-0.5, 0.15], [0.5, 0.15], [-0.5, -0.15], [0.5, -0.15]].forEach(p => { const leg = new THREE.Mesh(legGeo, legMat); leg.position.set(p[0], 0.175, p[1]); benchGroup.add(leg); });
+[[-0.5, 0.15], [0.5, 0.15], [-0.5, -0.15], [0.5, -0.15]].forEach(p => {
+  const leg = new THREE.Mesh(legGeo, legMat);
+  leg.position.set(p[0], 0.175, p[1]);
+  benchGroup.add(leg);
+});
 benchGroup.position.set(1.0, 0, -1.2);
 scene.add(benchGroup);
 
-/* 組み込みモーション */
 const BUILTIN_GESTURE_NAMES = ['nod', 'joy', 'surprised', 'wave', 'bow', 'jump', 'talk_explain', 'talk_passion', 'talk_think'];
 
 const motionPresets = {
@@ -744,6 +535,7 @@ let currentMixer = null;
 let currentAnimationAction = null;
 let isVrmaPlaying = false;
 let isVrmaLoading = false;
+let vrmaReturnPosition = null;
 
 let baseState = 'listening';
 let currentAction = null;
@@ -790,21 +582,32 @@ window.standUpFromChair = function () {
 const stopMoveGlobal = () => { if (!aiTargetPosition) moveInput = { x: 0, y: 0, z: 0 }; };
 window.addEventListener('mouseup', stopMoveGlobal);
 window.addEventListener('touchend', stopMoveGlobal);
+
 const triggerMove = (e, dx, dy, dz) => {
   if (e) e.preventDefault();
   window.standUpFromChair();
   if (currentAnimationAction) { currentAnimationAction.fadeOut(0.3); isVrmaPlaying = false; }
   aiTargetPosition = null; aiActionAfterArrival = null; baseState = 'listening'; currentAction = null; gestureTimer = 0; moveInput = { x: dx, y: dy, z: dz }; idleTime = 0;
 };
-const setupPadBtn = (id, dx, dy, dz) => { const btn = document.getElementById(id); btn.addEventListener('mousedown', (e) => triggerMove(e, dx, dy, dz)); btn.addEventListener('touchstart', (e) => triggerMove(e, dx, dy, dz)); };
-setupPadBtn('btn-up', 0, 0, -1); setupPadBtn('btn-down', 0, 0, 1); setupPadBtn('btn-left', -1, 0, 0); setupPadBtn('btn-right', 1, 0, 0); setupPadBtn('btn-fly', 0, 1, 0);
+
+const setupPadBtn = (id, dx, dy, dz) => {
+  const btn = document.getElementById(id);
+  btn.addEventListener('mousedown', (e) => triggerMove(e, dx, dy, dz));
+  btn.addEventListener('touchstart', (e) => triggerMove(e, dx, dy, dz));
+};
+setupPadBtn('btn-up', 0, 0, -1);
+setupPadBtn('btn-down', 0, 0, 1);
+setupPadBtn('btn-left', -1, 0, 0);
+setupPadBtn('btn-right', 1, 0, 0);
+setupPadBtn('btn-fly', 0, 1, 0);
 
 window.currentRestPose = null;
 
 function loadVRMData(file) {
   const overlay = document.getElementById('loading-overlay');
   const errorText = document.getElementById('loading-error-text');
-  overlay.style.display = 'flex'; errorText.innerHTML = '';
+  overlay.style.display = 'flex';
+  errorText.innerHTML = '';
   const url = URL.createObjectURL(file);
   try {
     loader.load(url, (gltf) => {
@@ -815,10 +618,18 @@ function loadVRMData(file) {
       if (currentVrm.lookAt) currentVrm.lookAt.target = camera;
 
       currentMixer = new THREE.AnimationMixer(currentVrm.scene);
-      currentAnimationAction = null; isVrmaPlaying = false; isVrmaLoading = false;
+      currentAnimationAction = null;
+      isVrmaPlaying = false;
+      isVrmaLoading = false;
 
-      basePosition.set(0, 0, 0); idleTime = 0; aiTargetPosition = null; aiActionAfterArrival = null;
-      baseState = 'listening'; currentAction = null; gestureTimer = 0; isCameraFollowing = true;
+      basePosition.set(0, 0, 0);
+      idleTime = 0;
+      aiTargetPosition = null;
+      aiActionAfterArrival = null;
+      baseState = 'listening';
+      currentAction = null;
+      gestureTimer = 0;
+      isCameraFollowing = true;
       window.currentSitOffset = 0;
 
       currentVrm.humanoid.resetPose();
@@ -844,17 +655,26 @@ function loadVRMData(file) {
     errorText.innerHTML += `<br><button style="margin-top:10px; padding:6px 12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('loading-overlay').style.display='none';">閉じる</button>`;
   }
 }
-document.getElementById('vrm-file').addEventListener('change', (e) => { if (e.target.files[0]) { loadVRMData(e.target.files[0]); saveVRMToIDB(e.target.files[0]); } });
 
-/* ★修正: playSavedVrma がアニメーション時間(ms)を正確に返し、クロスフェードさせるように */
+document.getElementById('vrm-file').addEventListener('change', (e) => {
+  if (e.target.files[0]) {
+    loadVRMData(e.target.files[0]);
+    saveVRMToIDB(e.target.files[0]);
+  }
+});
+
 window.playSavedVrma = (name) => {
   return new Promise(resolve => {
     const record = window.savedVrmaRecords.find(r => r.name === name);
     if (!record || !record.file || !currentVrm || !currentMixer) { resolve(0); return; }
 
+    vrmaReturnPosition = basePosition.clone();
     window.standUpFromChair();
     window.resetPoseState();
-    isVrmaLoading = true; isVrmaPlaying = false; currentAction = null; gestureTimer = 0;
+    isVrmaLoading = true;
+    isVrmaPlaying = false;
+    currentAction = null;
+    gestureTimer = 0;
 
     const url = URL.createObjectURL(record.file);
     loader.load(url, (gltf) => {
@@ -871,7 +691,8 @@ window.playSavedVrma = (name) => {
         const node = currentVrm.humanoid.getNormalizedBoneNode(boneName);
         if (node) window.previousBoneQuats[boneName] = node.quaternion.clone();
       }
-      window.vrmaBlendTime = 0.3; window.vrmaBlendMax = 0.3;
+      window.vrmaBlendTime = 0.3;
+      window.vrmaBlendMax = 0.3;
 
       currentVrm.humanoid.resetPose();
       currentVrm.scene.updateMatrixWorld(true);
@@ -884,21 +705,27 @@ window.playSavedVrma = (name) => {
 
       const animDuration = clip.duration || 0;
       const keepTime = animDuration > 0 ? (animDuration * 1000) : 3000;
-      
-      if (window.vrmaRestoreTimer) clearTimeout(window.vrmaRestoreTimer);
-      // ★修正: 途切れないよう、ポーズのリセットはアニメーション終了後 + 500ms の余裕を持たせる
-      window.vrmaRestoreTimer = setTimeout(() => { isVrmaPlaying = false; isVrmaLoading = false; window.resetPoseState(); }, keepTime + 500);
 
-      isVrmaLoading = false; isVrmaPlaying = true;
+      if (window.vrmaRestoreTimer) clearTimeout(window.vrmaRestoreTimer);
+      window.vrmaRestoreTimer = setTimeout(() => {
+        isVrmaPlaying = false;
+        isVrmaLoading = false;
+        if (vrmaReturnPosition) {
+          basePosition.copy(vrmaReturnPosition);
+        }
+        window.resetPoseState();
+      }, keepTime + 500);
+
+      isVrmaLoading = false;
+      isVrmaPlaying = true;
       currentAnimationAction.reset().play();
       setTimeout(() => URL.revokeObjectURL(url), 10000);
-      
-      resolve(keepTime); // アニメーションの実際の長さを返す
+
+      resolve(keepTime);
     }, undefined, () => { isVrmaLoading = false; resolve(0); });
   });
 };
 
-/* プレイリスト対応: 非同期関数にして再生時間を返す */
 window.playVRMA = async function (animationId) {
   if (!animationId || !currentVrm) return 0;
 
@@ -921,7 +748,7 @@ window.playVRMA = async function (animationId) {
     currentAction = animationId;
     gestureTimer = 4.0;
     idleTime = 0;
-    return 4000; 
+    return 4000;
   }
   return 0;
 };
@@ -945,6 +772,7 @@ function ensureAudioAnalysis() {
   if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
   return sharedAnalyser;
 }
+
 function getMouthOpenAmount() {
   if (!sharedAnalyser) return 0;
   const dataArray = new Uint8Array(sharedAnalyser.frequencyBinCount);
@@ -973,15 +801,30 @@ function setAvatarState(state) {
 }
 
 function applyPreset(poseObj, presetName, t) {
-  const p = motionPresets[presetName]; if (!p) return;
+  const p = motionPresets[presetName];
+  if (!p) return;
   const data = p.isAnimated ? p.animation(t) : p.joints;
   for (let joint in data) {
     if (!poseObj[joint]) poseObj[joint] = { x: 0, y: 0, z: 0 };
     for (let axis in data[joint]) poseObj[joint][axis] = data[joint][axis];
   }
 }
+
 const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
-function smoothRotate(current, target, speed) { let d = target - current; while (d < -Math.PI) d += Math.PI * 2; while (d > Math.PI) d -= Math.PI * 2; return current + d * speed; }
+function smoothRotate(current, target, speed) {
+  let d = target - current;
+  while (d < -Math.PI) d += Math.PI * 2;
+  while (d > Math.PI) d -= Math.PI * 2;
+  return current + d * speed;
+}
+
+let avatarBounds = { min: new THREE.Vector3(), max: new THREE.Vector3() };
+function calculateAvatarBounds() {
+  if (!currentVrm) return;
+  const box = new THREE.Box3().setFromObject(currentVrm.scene);
+  avatarBounds.min.copy(box.min);
+  avatarBounds.max.copy(box.max);
+}
 
 function updateAnimation(deltaTime, elapsedTime) {
   if (!currentVrm) return;
@@ -997,7 +840,9 @@ function updateAnimation(deltaTime, elapsedTime) {
         let weight = Math.max(0, window.vrmaBlendTime / window.vrmaBlendMax);
         for (const boneName of Object.values(VRMHumanBoneName)) {
           const node = currentVrm.humanoid.getNormalizedBoneNode(boneName);
-          if (node && window.previousBoneQuats[boneName]) node.quaternion.slerp(window.previousBoneQuats[boneName], weight);
+          if (node && window.previousBoneQuats[boneName]) {
+            node.quaternion.slerp(window.previousBoneQuats[boneName], weight);
+          }
         }
       }
     }
@@ -1008,8 +853,7 @@ function updateAnimation(deltaTime, elapsedTime) {
 
   if (isMoving || currentAction !== null || isSpeaking || isVrmaPlaying) { idleTime = 0; } else { idleTime += deltaTime; }
 
-  // ★ プレイリスト再生中はアイドルポーズへの自動遷移を抑制する
-  if (!isMoving && walkBlend === 0 && baseState !== 'sit_bench' && !aiTargetPosition && currentAction === null && aiActionAfterArrival === null && !isVrmaPlaying && !isLiveModeActive && !window.isPlaylistPlaying) {
+  if (!isMoving && walkBlend === 0 && baseState !== 'sit_bench' && !aiTargetPosition && currentAction === null && aiActionAfterArrival === null && !isVrmaPlaying && !isLiveModeActive) {
     if (idleTime > 15) { aiTargetPosition = new THREE.Vector3(1.0, 0, -0.7); aiActionAfterArrival = 'turning_for_sit'; }
   }
 
@@ -1017,25 +861,38 @@ function updateAnimation(deltaTime, elapsedTime) {
     let dist = basePosition.distanceTo(aiTargetPosition);
     if (dist > 0.05) {
       let dir = new THREE.Vector3().subVectors(aiTargetPosition, basePosition).normalize();
-      moveInput = { x: dir.x, y: 0, z: dir.z }; isMoving = true; idleTime = 0;
+      moveInput = { x: dir.x, y: 0, z: dir.z };
+      isMoving = true;
+      idleTime = 0;
     } else {
-      moveInput = { x: 0, y: 0, z: 0 }; isMoving = false; aiTargetPosition = null;
+      moveInput = { x: 0, y: 0, z: 0 };
+      isMoving = false;
+      aiTargetPosition = null;
       if (aiActionAfterArrival === 'turning_for_sit') aiActionAfterArrival = 'turning';
     }
   }
   if (aiActionAfterArrival === 'turning') {
-    const targetRot = Math.PI; let diff = Math.abs((currentVrm.scene.rotation.y % (Math.PI * 2)) - targetRot);
+    const targetRot = Math.PI;
+    let diff = Math.abs((currentVrm.scene.rotation.y % (Math.PI * 2)) - targetRot);
     if (diff > Math.PI) diff = Math.PI * 2 - diff;
     if (diff < 0.1) aiActionAfterArrival = 'step_back_sit';
     idleTime = 0;
   }
   if (aiActionAfterArrival === 'step_back_sit') {
     basePosition.z -= 1.5 * deltaTime;
-    if (basePosition.z <= -1.15) { basePosition.z = -1.15; baseState = 'sit_bench'; currentAction = null; gestureTimer = 0; aiActionAfterArrival = null; window.resetPoseState(); }
+    if (basePosition.z <= -1.15) {
+      basePosition.z = -1.15;
+      baseState = 'sit_bench';
+      currentAction = null;
+      gestureTimer = 0;
+      aiActionAfterArrival = null;
+      window.resetPoseState();
+    }
     idleTime = 0;
   }
 
-  walkBlend += isMoving ? deltaTime * 6 : -deltaTime * 6; walkBlend = clamp(walkBlend, 0, 1);
+  walkBlend += isMoving ? deltaTime * 6 : -deltaTime * 6;
+  walkBlend = clamp(walkBlend, 0, 1);
 
   if (expressions) {
     if (idleTime > 60 && !isVrmaPlaying) { expressions.setValue('blink', 1.0); }
@@ -1045,21 +902,31 @@ function updateAnimation(deltaTime, elapsedTime) {
     if (isSpeaking) {
       if (lipSyncMode === 'amplitude') {
         const mouth = getMouthOpenAmount();
-        expressions.setValue('aa', mouth); expressions.setValue('ih', mouth * 0.3); expressions.setValue('ou', mouth * 0.5);
+        expressions.setValue('aa', mouth);
+        expressions.setValue('ih', mouth * 0.3);
+        expressions.setValue('ou', mouth * 0.5);
       } else {
         lipSyncTimer -= deltaTime;
         if (lipSyncTimer <= 0) {
-          expressions.setValue('aa', Math.random() * 0.6); expressions.setValue('ih', Math.random() * 0.2); expressions.setValue('ou', Math.random() * 0.4);
+          expressions.setValue('aa', Math.random() * 0.6);
+          expressions.setValue('ih', Math.random() * 0.2);
+          expressions.setValue('ou', Math.random() * 0.4);
           lipSyncTimer = 0.08 + Math.random() * 0.1;
         }
       }
-    } else { ['aa', 'ih', 'ou', 'ee', 'oh'].forEach(v => expressions.setValue(v, 0)); }
+    } else {
+      ['aa', 'ih', 'ou', 'ee', 'oh'].forEach(v => expressions.setValue(v, 0));
+    }
   }
 
   if (isMoving) {
-    basePosition.x += moveInput.x * moveSpeed * deltaTime; basePosition.y += moveInput.y * moveSpeed * deltaTime; basePosition.z += moveInput.z * moveSpeed * deltaTime;
+    basePosition.x += moveInput.x * moveSpeed * deltaTime;
+    basePosition.y += moveInput.y * moveSpeed * deltaTime;
+    basePosition.z += moveInput.z * moveSpeed * deltaTime;
     if (basePosition.y < 0) basePosition.y = 0;
-    if (moveInput.x !== 0 || moveInput.z !== 0) currentVrm.scene.rotation.y = smoothRotate(currentVrm.scene.rotation.y, Math.atan2(moveInput.x, moveInput.z) + Math.PI, 10 * deltaTime);
+    if (moveInput.x !== 0 || moveInput.z !== 0) {
+      currentVrm.scene.rotation.y = smoothRotate(currentVrm.scene.rotation.y, Math.atan2(moveInput.x, moveInput.z) + Math.PI, 10 * deltaTime);
+    }
   } else if (aiActionAfterArrival === 'turning') {
     currentVrm.scene.rotation.y = smoothRotate(currentVrm.scene.rotation.y, Math.PI, 10 * deltaTime);
   } else {
@@ -1085,21 +952,38 @@ function updateAnimation(deltaTime, elapsedTime) {
 
   if (walkBlend > 0) {
     if (basePosition.y > 0.1) {
-      targetPose.spine.x += 0.2*walkBlend; targetPose.leftUpperArm.z = 0.2*walkBlend; targetPose.rightUpperArm.z = -0.2*walkBlend; targetPose.leftUpperArm.y = 0.5*walkBlend; targetPose.rightUpperArm.y = -0.5*walkBlend; targetPose.leftLowerArm.x = 0.8*walkBlend; targetPose.rightLowerArm.x = 0.8*walkBlend; targetPose.leftUpperLeg.x += 0.3*walkBlend; targetPose.rightUpperLeg.x += 0.3*walkBlend; targetPose.leftLowerLeg.x += -0.5*walkBlend; targetPose.rightLowerLeg.x += -0.5*walkBlend;
+      targetPose.spine.x += 0.2*walkBlend;
+      targetPose.leftUpperArm.z = 0.2*walkBlend;
+      targetPose.rightUpperArm.z = -0.2*walkBlend;
+      targetPose.leftUpperArm.y = 0.5*walkBlend;
+      targetPose.rightUpperArm.y = -0.5*walkBlend;
+      targetPose.leftLowerArm.x = 0.8*walkBlend;
+      targetPose.rightLowerArm.x = 0.8*walkBlend;
+      targetPose.leftUpperLeg.x += 0.3*walkBlend;
+      targetPose.rightUpperLeg.x += 0.3*walkBlend;
+      targetPose.leftLowerLeg.x += -0.5*walkBlend;
+      targetPose.rightLowerLeg.x += -0.5*walkBlend;
     } else {
       const walkPhase = elapsedTime * (10 + moveSpeed * 1.5);
-      let sinP = Math.sin(walkPhase); let cosP = Math.cos(walkPhase);
-      targetPose.spine.x += 0.05*walkBlend; targetPose.spine.y += sinP*0.05*walkBlend; targetPose.chest.y += sinP*0.05*walkBlend; targetPose.leftShoulder.y += sinP*0.08*walkBlend; targetPose.rightShoulder.y += -sinP*0.08*walkBlend; targetPose.leftUpperLeg.x += sinP*0.6*walkBlend; targetPose.rightUpperLeg.x += -sinP*0.6*walkBlend; targetPose.leftLowerLeg.x += -Math.pow(Math.max(0,cosP),1.5)*1.2*walkBlend; targetPose.rightLowerLeg.x += -Math.pow(Math.max(0,-cosP),1.5)*1.2*walkBlend; targetPose.leftUpperArm.y += sinP*0.6*walkBlend; targetPose.rightUpperArm.y += sinP*0.6*walkBlend;
-      let leftElbowX = (-sinP*0.5) > 0 ? (-sinP*0.5)*1.2 : 0; let rightElbowX = (sinP*0.5) > 0 ? (sinP*0.5)*1.2 : 0;
-      targetPose.leftLowerArm.x += leftElbowX*walkBlend; targetPose.rightLowerArm.x += rightElbowX*walkBlend;
+      let sinP = Math.sin(walkPhase);
+      let cosP = Math.cos(walkPhase);
+      targetPose.spine.x += 0.05*walkBlend;
+      targetPose.spine.y += sinP*0.05*walkBlend;
+      targetPose.chest.y += sinP*0.05*walkBlend;
+      targetPose.leftShoulder.y += sinP*0.08*walkBlend;
+      targetPose.rightShoulder.y += -sinP*0.08*walkBlend;
+      targetPose.leftUpperLeg.x += sinP*0.6*walkBlend;
+      targetPose.rightUpperLeg.x += -sinP*0.6*walkBlend;
+      targetPose.leftLowerLeg.x += -Math.pow(Math.max(0,cosP),1.5)*1.2*walkBlend;
+      targetPose.rightLowerLeg.x += -Math.pow(Math.max(0,-cosP),1.5)*1.2*walkBlend;
+      targetPose.leftUpperArm.y += sinP*0.6*walkBlend;
+      targetPose.rightUpperArm.y += sinP*0.6*walkBlend;
+      let leftElbowX = (-sinP*0.5) > 0 ? (-sinP*0.5)*1.2 : 0;
+      let rightElbowX = (sinP*0.5) > 0 ? (sinP*0.5)*1.2 : 0;
+      targetPose.leftLowerArm.x += leftElbowX*walkBlend;
+      targetPose.rightLowerArm.x += rightElbowX*walkBlend;
       currentVrm.scene.position.y += Math.abs(sinP)*0.03*walkBlend;
     }
-  }
-
-  const useAxisFix = document.getElementById('axis-fix').checked;
-  if (useAxisFix) {
-    const swapJoints = ['leftLowerArm','rightLowerArm','leftUpperArm','rightUpperArm','leftUpperLeg','rightUpperLeg','leftLowerLeg','rightLowerLeg'];
-    swapJoints.forEach(j => { if (targetPose[j]) { let tempX = targetPose[j].x||0; let tempZ = targetPose[j].z||0; targetPose[j].x = tempZ; targetPose[j].z = tempX; } });
   }
 
   if (!window.currentOffsetQuats) window.currentOffsetQuats = {};
@@ -1130,16 +1014,45 @@ function updateAnimation(deltaTime, elapsedTime) {
   currentVrm.update(deltaTime);
 }
 
+function computeLiveCamera() {
+  if (!currentVrm) return;
+  calculateAvatarBounds();
+
+  const avatarHeight = avatarBounds.max.y - avatarBounds.min.y;
+  const avatarCenter = new THREE.Vector3(
+    (avatarBounds.max.x + avatarBounds.min.x) / 2,
+    (avatarBounds.max.y + avatarBounds.min.y) / 2,
+    (avatarBounds.max.z + avatarBounds.min.z) / 2
+  );
+
+  const distance = Math.max(2.5, avatarHeight * 2.5);
+  const eyeHeight = avatarCenter.y + avatarHeight * 0.3;
+
+  liveCameraTarget.pos.set(
+    currentVrm.scene.position.x,
+    currentVrm.scene.position.y + eyeHeight,
+    currentVrm.scene.position.z + distance
+  );
+  liveCameraTarget.look.set(
+    currentVrm.scene.position.x,
+    currentVrm.scene.position.y + eyeHeight,
+    currentVrm.scene.position.z
+  );
+}
+
 const liveCameraTarget = { pos: new THREE.Vector3(0, 1.5, 1.6), look: new THREE.Vector3(0, 1.4, 0) };
 function enterLiveCameraFraming() { controls.enabled = false; }
 function exitLiveCameraFraming() { controls.enabled = true; }
+
 function prepareAvatarForLive() {
   if (!currentVrm) return;
   window.standUpFromChair();
-  aiTargetPosition = null; aiActionAfterArrival = null;
+  aiTargetPosition = null;
+  aiActionAfterArrival = null;
   basePosition.set(0, 0, -0.3);
   moveInput = { x: 0, y: 0, z: 0 };
   idleTime = 0;
+  computeLiveCamera();
 }
 
 function animate() {
@@ -1149,9 +1062,10 @@ function animate() {
   updateAnimation(delta, elapsed);
 
   if (isLiveModeActive) {
-    camera.position.lerp(liveCameraTarget.pos, delta * 2.0);
-    controls.target.lerp(liveCameraTarget.look, delta * 2.0);
-    if (avatarState === 'speaking' && sharedAudioCtx && sharedAudioCtx.currentTime > nextAudioTime + 0.2) {
+    computeLiveCamera();
+    camera.position.lerp(liveCameraTarget.pos, delta * 1.5);
+    controls.target.lerp(liveCameraTarget.look, delta * 1.5);
+    if (avatarState === 'speaking' && sharedAudioCtx && sharedAudioCtx.currentTime > nextAudioTime + 0.5) {
       setAvatarState('listening');
     }
   } else if (currentVrm && isCameraFollowing) {
@@ -1175,23 +1089,33 @@ const sendBtn = document.getElementById('send-btn');
 const chatContainer = document.getElementById('chat-container');
 
 window.clearDisplay = () => { chatHistoryDiv.innerHTML = ''; };
-// ★透明化ボタンの動作 (CSSクラスの付け外し)
 window.toggleTransparency = () => { chatContainer.classList.toggle('transparent-mode'); };
 
 function renderHistory() {
   chatHistoryDiv.innerHTML = '';
-  chatHistory.slice(-6).forEach(msg => { const div = document.createElement('div'); div.className = `msg ${msg.role === 'user' ? 'user' : 'bot'}`; div.textContent = msg.content; chatHistoryDiv.appendChild(div); });
+  chatHistory.slice(-6).forEach(msg => {
+    const div = document.createElement('div');
+    div.className = `msg ${msg.role === 'user' ? 'user' : 'bot'}`;
+    div.textContent = msg.content;
+    chatHistoryDiv.appendChild(div);
+  });
   chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
 }
 
 let chatLogs = [];
-function addChatLog(role, text) { const time = new Date().toLocaleTimeString(); chatLogs.push(`[${time}] ${role}: ${text}`); }
+function addChatLog(role, text) {
+  const time = new Date().toLocaleTimeString();
+  chatLogs.push(`[${time}] ${role}: ${text}`);
+}
 
 function triggerAvatarActionSequence(emotionLabel, gesturesArr) {
   if (!currentVrm) return;
   const expressions = currentVrm.expressionManager;
   if (expressions) {
-    expressions.setValue('happy', 0); expressions.setValue('angry', 0); expressions.setValue('sad', 0); expressions.setValue('neutral', 0);
+    expressions.setValue('happy', 0);
+    expressions.setValue('angry', 0);
+    expressions.setValue('sad', 0);
+    expressions.setValue('neutral', 0);
     if (emotionLabel === 'joy') expressions.setValue('happy', 1.0);
     else if (emotionLabel === 'angry') expressions.setValue('angry', 1.0);
     else if (emotionLabel === 'sorrow') expressions.setValue('sad', 1.0);
@@ -1235,11 +1159,6 @@ const reactionDict = [
   { text: 'さすがですね!', emotion: 'joy', gesture: 'joy' },
   { text: '知らなかった!', emotion: 'surprised', gesture: 'surprised' }
 ];
-const fallbackGags = [
-  'あれ、声のデータがうまく読み込めなかったみたい…今日はこの声で我慢してね!',
-  'むむ、電波の調子が悪いのかな?いつもと違う声だけど許して!',
-  'あ、変換に失敗しちゃった…素の声で話すね!'
-];
 
 async function callGeminiAPI(userText) {
   chatHistory.push({ role: 'user', content: userText });
@@ -1250,7 +1169,9 @@ async function callGeminiAPI(userText) {
   idleTime = 0;
   setAvatarState('thinking');
 
-  let silentUtter = new SpeechSynthesisUtterance(''); silentUtter.volume = 0; window.speechSynthesis.speak(silentUtter);
+  let silentUtter = new SpeechSynthesisUtterance('');
+  silentUtter.volume = 0;
+  window.speechSynthesis.speak(silentUtter);
 
   const apiKey = apiKeyInput.value.trim();
   if (!apiKey || !characterSettings) {
@@ -1258,7 +1179,8 @@ async function callGeminiAPI(userText) {
     triggerAvatarActionSequence(choice.emotion, [choice.gesture]);
     lipSyncMode = 'random';
     speakTextWithWebSpeech(choice.text);
-    chatHistory.push({ role: 'bot', content: choice.text }); renderHistory();
+    chatHistory.push({ role: 'bot', content: choice.text });
+    renderHistory();
     return;
   }
 
@@ -1273,31 +1195,23 @@ async function callGeminiAPI(userText) {
 
   const vrmaListText = (window.savedVrmaRecords && window.savedVrmaRecords.length > 0) ? window.savedVrmaRecords.map(r => r.name).join(', ') : '登録なし';
 
-  const systemPrompt = `あなたは以下の設定を持つ3DヒューマノイドAIです。必ず指定されたJSON形式のみで返答してください。
-【キャラ設定】
-${JSON.stringify(characterSettings)}
-【ユーザー記憶】
-${JSON.stringify(relationMemory)}
+  const systemPrompt = `あなたは以下の設定を持つ3DヒューマノイドAIです。
+【キャラ設定】${JSON.stringify(characterSettings)}
+【ユーザー記憶】${JSON.stringify(relationMemory)}
 【組み込みジェスチャー】${BUILTIN_GESTURE_NAMES.join(', ')}
 【登録済みの専用モーション】${vrmaListText}
-
-【出力JSONスキーマ】
-{
-  "speech_text": "発話テキスト",
-  "quick_replies": ["候補1", "候補2"],
-  "emotion": "joy, angry, sorrow, neutralのいずれか",
-  "gestures": ["モーション名1", "モーション名2"],
-  "memory_update": {"ユーザーの趣味": "読書"}
-}
-【重要: gesturesの指定ルール】
-上記の『登録済みの専用モーション』または『組み込みジェスチャー』から、会話の文脈に合うものを配列で指定してください。
-セリフが長い場合は2〜3個指定してください(順番に再生されます)。合致するものがなければ "talk_explain" 等の基本ポーズを指定してください。`;
+【出力JSON形式】{"speech_text":"発話","quick_replies":["候補1"],"emotion":"joy/angry/sorrow/neutral","gestures":["モーション1"],"memory_update":{}}`;
 
   let result;
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${FAST_MODEL_ID}:generateContent?key=${apiKey}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents: chatHistory.slice(-12).map(msg => ({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] })), generationConfig: { responseMimeType: 'application/json' } })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: chatHistory.slice(-12).map(msg => ({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] })),
+        generationConfig: { responseMimeType: 'application/json' }
+      })
     });
     if (!response.ok) throw new Error('通信エラー');
     const data = await response.json();
@@ -1325,40 +1239,35 @@ ${JSON.stringify(relationMemory)}
   const talkGestures = ['talk_explain', 'talk_passion', 'talk_think'];
   while (gesturesArr.length < neededGestures) gesturesArr.push(talkGestures[Math.floor(Math.random() * talkGestures.length)]);
 
-  let audioUrl = null;
-  if (document.getElementById('use-gemini-tts').checked) {
-    try { audioUrl = await generateGeminiVoice(finalSpeechText, result.emotion); }
-    catch (err) {
-      if (!window.hasApologizedForFallback) { const gag = fallbackGags[Math.floor(Math.random() * fallbackGags.length)]; finalSpeechText = gag + ' ' + finalSpeechText; window.hasApologizedForFallback = true; }
-    }
-  }
-
   botMsgDiv.innerHTML = finalSpeechText;
   chatHistory.push({ role: 'bot', content: finalSpeechText });
   localStorage.setItem('vrm_chatHistory', JSON.stringify(chatHistory));
 
   triggerAvatarActionSequence(result.emotion, gesturesArr);
 
-  if (audioUrl) {
-    ensureAudioAnalysis(); lipSyncMode = 'amplitude';
-    audioPlayer.src = audioUrl;
-    try { await audioPlayer.play(); } catch (e) { lipSyncMode = 'random'; speakTextWithWebSpeech(finalSpeechText); }
-  } else {
-    lipSyncMode = 'random';
-    speakTextWithWebSpeech(finalSpeechText);
-  }
+  lipSyncMode = 'random';
+  speakTextWithWebSpeech(finalSpeechText);
 
   if (result.quick_replies) {
     result.quick_replies.forEach(text => {
       const btn = document.createElement('button');
-      btn.className = 'qr-btn'; btn.textContent = text;
+      btn.className = 'qr-btn';
+      btn.textContent = text;
       btn.onclick = () => callGeminiAPI(text);
       quickRepliesDiv.appendChild(btn);
     });
   }
 }
 
-sendBtn.addEventListener('click', () => { const text = chatInput.value.trim(); if (text) { ensureAudioAnalysis(); audioPlayer.play().catch(() => {}); audioPlayer.pause(); callGeminiAPI(text); } });
+sendBtn.addEventListener('click', () => {
+  const text = chatInput.value.trim();
+  if (text) {
+    ensureAudioAnalysis();
+    audioPlayer.play().catch(() => {});
+    audioPlayer.pause();
+    callGeminiAPI(text);
+  }
+});
 chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
 renderHistory();
 
@@ -1366,64 +1275,11 @@ audioPlayer.addEventListener('play', () => { setAvatarState('speaking'); });
 audioPlayer.addEventListener('ended', () => { setAvatarState(isLiveModeActive ? 'listening' : 'idle'); if (window.gestureSequenceTimer) clearInterval(window.gestureSequenceTimer); });
 audioPlayer.addEventListener('error', () => { setAvatarState(isLiveModeActive ? 'listening' : 'idle'); if (window.gestureSequenceTimer) clearInterval(window.gestureSequenceTimer); });
 
-function createWavBlob(base64Data, sampleRate) {
-  const binaryString = atob(base64Data);
-  const len = binaryString.length;
-  const pcmData = new Uint8Array(len);
-  for (let i = 0; i < len; i++) pcmData[i] = binaryString.charCodeAt(i);
-
-  const wavHeader = new ArrayBuffer(44);
-  const view = new DataView(wavHeader);
-  const numChannels = 1, bitsPerSample = 16;
-  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-  const blockAlign = numChannels * (bitsPerSample / 8);
-  view.setUint32(0, 0x52494646, false); view.setUint32(4, 36 + len, true); view.setUint32(8, 0x57415645, false);
-  view.setUint32(12, 0x666D7420, false); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true); view.setUint32(24, sampleRate, true); view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true); view.setUint16(34, bitsPerSample, true); view.setUint32(36, 0x64617461, false); view.setUint32(40, len, true);
-  return new Blob([wavHeader, pcmData], { type: 'audio/wav' });
-}
-
-async function fetchGeminiTTS(modelName, apiKey, payload) {
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-  const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-  const data = await response.json();
-  if (data.error) throw new Error(data.error.message);
-  return data;
-}
-
-async function generateGeminiVoice(text, emotionStr) {
-  const API_KEY = apiKeyInput.value.trim();
-  const voice = document.getElementById('tts-voice-select').value;
-  const customPrompt = document.getElementById('tts-custom-prompt').value.trim();
-  let tone = '人間らしく自然なトーンで';
-  if (emotionStr === 'joy') tone = '非常に明るく、元気いっぱいの高いテンションで';
-  else if (emotionStr === 'sorrow') tone = 'ため息をつきながら、とても悲しそうなトーンでゆっくりと';
-  else if (emotionStr === 'angry') tone = '少しパニックになったように、早口で焦った様子で';
-  let instructions = [tone]; if (customPrompt) instructions.push(customPrompt);
-  const prompt = `以下のセリフを、【${instructions.join('、かつ、')}】読み上げてください:\n\n${text}`;
-  const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } } };
-
-  for (const model of TTS_MODEL_CANDIDATES) {
-    try {
-      const data = await fetchGeminiTTS(model, API_KEY, payload);
-      const inlineData = data.candidates[0].content.parts[0].inlineData;
-      const base64Audio = inlineData.data;
-      let sampleRate = 24000;
-      const mimeMatch = inlineData.mimeType.match(/rate=(\d+)/);
-      if (mimeMatch) sampleRate = parseInt(mimeMatch[1], 10);
-      return URL.createObjectURL(createWavBlob(base64Audio, sampleRate));
-    } catch (e) { console.warn(`[${model}] TTS生成に失敗:`, e); }
-  }
-  throw new Error('全てのTTSモデルで生成に失敗しました');
-}
-
 function speakTextWithWebSpeech(text) {
   window.speechSynthesis.cancel();
   lipSyncMode = 'random';
   const utter = new SpeechSynthesisUtterance(text);
-  const selectedOption = document.getElementById('voice-select').selectedOptions[0]?.value;
-  if (selectedOption && voices[selectedOption]) utter.voice = voices[selectedOption];
+  if (voices.length > 0) utter.voice = voices[0];
   utter.rate = 1.1;
   utter.onstart = () => setAvatarState('speaking');
   utter.onend = () => { setAvatarState(isLiveModeActive ? 'listening' : 'idle'); if (window.gestureSequenceTimer) clearInterval(window.gestureSequenceTimer); };
@@ -1440,31 +1296,28 @@ function getSelectedLiveModelId() {
 const LIVE_TOOLS = [{
   functionDeclarations: [{
     name: 'play_motion',
-    description: '3Dアバターに身振り・モーションを再生させます。挨拶や別れ際には"wave"、感謝や謝罪の場面では"bow"、驚いた時は"surprised"、楽しい話には"joy"、うなずきには"nod"、盛り上がった場面には"jump"を使ってください。登録済みの専用モーション名が利用できる場合は、そちらを優先してください。',
+    description: 'アバターにモーションを再生させる',
     parameters: {
       type: 'OBJECT',
-      properties: { action_id: { type: 'STRING', description: '再生したいモーションのID (例: wave, bow, nod, joy, surprised, jump, talk_explain、または登録済みVRMAモーション名)' } },
+      properties: { action_id: { type: 'STRING', description: 'モーションID' } },
       required: ['action_id']
     }
   }]
 }];
 
 function buildLiveSystemInstruction() {
-  const charText = characterSettings ? JSON.stringify(characterSettings) : 'あなたはフレンドリーで親しみやすいAIパートナーです。';
+  const charText = characterSettings ? JSON.stringify(characterSettings) : 'フレンドリーなAIパートナー';
   const vrmaNames = (window.savedVrmaRecords || []).map(r => r.name).join('、') || 'なし';
-  return `あなたは3Dアバターとして振る舞う配信・会話AIです。以下の設定を反映し、自然な音声で会話してください。
-【キャラクター設定】
-${charText}
-【登録済みの専用モーション】
-${vrmaNames}
-短く、テンポよく、人間らしい相槌を交えながら話してください。感情が動く場面やジェスチャーが自然な場面では、
-積極的に play_motion 関数を呼び出してアバターを動かしてください。`;
+  return `3Dアバター配信AI。設定: ${charText}。登録モーション: ${vrmaNames}。短くテンポよく話し、自然にplay_motionで身振りを加えてください。`;
 }
 
 function resetLiveCaptions() {
-  liveCaptionAI = ''; liveCaptionUser = '';
-  const a = document.getElementById('caption-ai'); if (a) a.textContent = '';
-  const u = document.getElementById('caption-user'); if (u) u.textContent = '';
+  liveCaptionAI = '';
+  liveCaptionUser = '';
+  const a = document.getElementById('caption-ai');
+  if (a) a.textContent = '';
+  const u = document.getElementById('caption-user');
+  if (u) u.textContent = '';
 }
 
 function updateLiveToggleUI() {
@@ -1559,11 +1412,13 @@ async function startLiveMode() {
 
       if (sc.inputTranscription?.text) {
         liveCaptionUser += sc.inputTranscription.text;
-        const u = document.getElementById('caption-user'); if (u) u.textContent = '🎙️ ' + liveCaptionUser;
+        const u = document.getElementById('caption-user');
+        if (u) u.textContent = '🎙️ ' + liveCaptionUser;
       }
       if (sc.outputTranscription?.text) {
         liveCaptionAI += sc.outputTranscription.text;
-        const a = document.getElementById('caption-ai'); if (a) a.textContent = '🤖 ' + liveCaptionAI;
+        const a = document.getElementById('caption-ai');
+        if (a) a.textContent = '🤖 ' + liveCaptionAI;
       }
 
       if (sc.interrupted) { nextAudioTime = sharedAudioCtx.currentTime; }
@@ -1571,7 +1426,6 @@ async function startLiveMode() {
       if (sc.turnComplete) {
         if (accumulatedSpeechText.trim() !== '') {
           addChatLog('AI', accumulatedSpeechText.trim());
-          triggerLiveBehaviorAnalysis(accumulatedSpeechText.trim());
           accumulatedSpeechText = '';
         }
         setTimeout(resetLiveCaptions, 1800);
@@ -1582,7 +1436,8 @@ async function startLiveMode() {
   scriptProcessor.onaudioprocess = (e) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     const inputData = e.inputBuffer.getChannelData(0);
-    let sum = 0; for (let i = 0; i < inputData.length; i++) sum += inputData[i] * inputData[i];
+    let sum = 0;
+    for (let i = 0; i < inputData.length; i++) sum += inputData[i] * inputData[i];
     const rms = Math.sqrt(sum / inputData.length);
     if (rms > 0.02 && avatarState !== 'speaking') setAvatarState('listening');
     else if (rms <= 0.01 && avatarState === 'listening') setAvatarState('thinking');
@@ -1590,19 +1445,23 @@ async function startLiveMode() {
     const pcm16 = new Int16Array(inputData.length);
     for (let i = 0; i < inputData.length; i++) pcm16[i] = Math.max(-1, Math.min(1, inputData[i])) * 32767;
     const uint8 = new Uint8Array(pcm16.buffer);
-    let binary = ''; for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+    let binary = '';
+    for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
 
     ws.send(JSON.stringify({ realtimeInput: { audio: { data: btoa(binary), mimeType: 'audio/pcm;rate=16000' } } }));
   };
 }
 
 function stopLiveMode() {
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) { try { ws.close(1000, 'user_stopped'); } catch (e) {} }
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+    try { ws.close(1000, 'user_stopped'); } catch (e) {}
+  }
   ws = null;
   if (scriptProcessor) { scriptProcessor.onaudioprocess = null; scriptProcessor.disconnect(); scriptProcessor = null; }
   if (micCtx) { micCtx.close(); micCtx = null; }
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-  nextAudioTime = 0; accumulatedSpeechText = '';
+  nextAudioTime = 0;
+  accumulatedSpeechText = '';
   isLiveModeActive = false;
   updateLiveToggleUI();
   setAvatarState('idle');
@@ -1631,50 +1490,21 @@ function playLiveAudioPCM(base64) {
   nextAudioTime += audioBuffer.duration;
 }
 
-async function triggerLiveBehaviorAnalysis(speechText) {
-  const apiKey = apiKeyInput.value.trim();
-  if (!apiKey || !speechText) return;
-  const vrmaNames = (window.savedVrmaRecords || []).map(r => r.name).join(', ') || 'なし';
-  const prompt = `あなたは3DアバターキャラクターのAIモーションディレクターです。
-以下のセリフの感情と文脈を分析し、表情と一連の身振り(ジェスチャー)を選んでください。
-
-【表情の選択肢】happy, angry, sad, relaxed, surprised, neutral
-【組み込みジェスチャーの選択肢】${BUILTIN_GESTURE_NAMES.join(', ')}
-【登録済みの専用モーション】${vrmaNames}
-
-セリフが長い場合は、話の展開に合わせて2〜3個のジェスチャーを順番に指定してください。
-必ず以下のJSON形式のみで返答してください(前置きや説明文は一切不要):
-{"expression": "表情", "gestures": ["モーション1", "モーション2"]}
-
-セリフ: "${speechText}"`;
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${FAST_MODEL_ID}:generateContent?key=${apiKey}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json' } })
-    });
-    if (!res.ok) throw new Error('behavior analysis request failed');
-    const data = await res.json();
-    const raw = data.candidates[0].content.parts[0].text.trim().replace(/^```json\s*|```$/g, '');
-    const action = JSON.parse(raw);
-    triggerAvatarActionSequence(action.expression, action.gestures || []);
-  } catch (err) { console.warn('[triggerLiveBehaviorAnalysis] 動作解析に失敗:', err); }
-}
-
 const VOICE_COMMANDS = [
-  { actionId: 'wave', label: '手を振る', keywords: ['手を振って', '手をふって', 'バイバイして', '振ってみせて'] },
+  { actionId: 'wave', label: '手を振る', keywords: ['手を振って', '手をふって', 'バイバイして'] },
   { actionId: 'bow', label: 'お辞儀', keywords: ['お辞儀して', 'おじぎして', '一礼して'] },
-  { actionId: 'jump', label: 'ジャンプ', keywords: ['ジャンプして', 'じゃんぷして', '跳んでみて', '飛び跳ねて'] },
-  { actionId: 'nod', label: 'うなずく', keywords: ['うなずいて', 'うなずいてみて'] },
+  { actionId: 'jump', label: 'ジャンプ', keywords: ['ジャンプして', 'じゃんぷして', '跳んでみて'] },
+  { actionId: 'nod', label: 'うなずく', keywords: ['うなずいて'] },
   { actionId: 'joy', label: '喜ぶ', keywords: ['喜んで', '嬉しそうにして'] },
   { actionId: 'surprised', label: '驚く', keywords: ['驚いて', 'びっくりして'] },
-  { actionId: 'sit_bench', label: '座る', keywords: ['座って', 'すわって', '腰掛けて'] },
-  { actionId: 'stand_idle', label: '立つ', keywords: ['立って', 'たちあがって'] },
 ];
 
 let recognition = null;
 let isVoiceCommandActive = false;
 
-function matchVoiceCommand(transcript) { return VOICE_COMMANDS.find(cmd => cmd.keywords.some(k => transcript.includes(k))); }
+function matchVoiceCommand(transcript) {
+  return VOICE_COMMANDS.find(cmd => cmd.keywords.some(k => transcript.includes(k)));
+}
 
 function setupSpeechRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1720,34 +1550,47 @@ window.toggleVoiceCommand = () => {
 };
 
 window.exportMemory = () => {
-  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(relationMemory, null, 2));
-  const a = document.createElement('a'); a.setAttribute('href', dataStr); a.setAttribute('download', 'vrm_memory.json');
-  document.body.appendChild(a); a.click(); a.remove();
+  const blob = new Blob([JSON.stringify(relationMemory, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'vrm_memory.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 };
+
 window.exportChatLog = () => {
-  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(chatHistory, null, 2));
-  const a = document.createElement('a'); a.setAttribute('href', dataStr); a.setAttribute('download', 'vrm_chatlog.json');
-  document.body.appendChild(a); a.click(); a.remove();
+  const blob = new Blob([JSON.stringify(chatHistory, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'vrm_chatlog.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 };
-document.getElementById('memory-file').addEventListener('change', (e) => {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    try { relationMemory = JSON.parse(event.target.result); localStorage.setItem('vrm_relationMemory', JSON.stringify(relationMemory)); alert('記憶データを正常に復元しました。'); }
-    catch (err) { alert('ファイルの読み込みに失敗しました。正しいJSONファイルか確認してください。'); }
-  };
-  reader.readAsText(file);
-});
+
 window.clearMemory = () => {
   if (confirm('すべての記憶、会話ログ、設定をリセットしますか?\n(※IndexedDBに保存されたVRMとモーションは消えません)')) {
-    localStorage.removeItem('vrm_chatHistory'); localStorage.removeItem('vrm_relationMemory'); localStorage.removeItem('vrm_characterSettings');
+    localStorage.removeItem('vrm_chatHistory');
+    localStorage.removeItem('vrm_relationMemory');
+    localStorage.removeItem('vrm_characterSettings');
     location.reload();
   }
 };
+
 window.applyJsonText = () => {
   const text = document.getElementById('json-text').value;
-  try { characterSettings = JSON.parse(text); localStorage.setItem('vrm_characterSettings', JSON.stringify(characterSettings)); alert('キャラクター設定を正常に適用しました。'); }
-  catch (e) { alert('JSONの形式が正しくありません。\nカンマの抜け漏れや全角文字が含まれていないか確認してください。'); }
+  try {
+    characterSettings = JSON.parse(text);
+    localStorage.setItem('vrm_characterSettings', JSON.stringify(characterSettings));
+    alert('キャラクター設定を正常に適用しました。');
+  } catch (e) {
+    alert('JSONの形式が正しくありません。');
+  }
 };
 </script>
 </body>
